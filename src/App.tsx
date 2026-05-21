@@ -16,7 +16,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { LoginPage } from "@/components/auth/LoginPage";
 import { DispatchEntriesPage } from "@/components/departure/DispatchEntriesPage";
 import { ProductDepartureForm } from "@/components/departure/ProductDepartureForm";
 import { ManufacturingEntryForm } from "@/components/manufacturing/ManufacturingEntryForm";
@@ -25,6 +24,7 @@ import { PurchaseEntryForm } from "@/components/purchase/PurchaseEntryForm";
 import { PurchaseEntriesPage } from "@/components/purchase/PurchaseEntriesPage";
 import { Button } from "@/components/ui/button";
 import newLogo from "@/assets/new_logo.png";
+import { LoginPage } from "./components/auth/LoginPage";
 
 const AUTH_STORAGE_KEY = "inventory-auth-user";
 
@@ -192,18 +192,23 @@ function AppShell() {
             </div>
           </header>
 
+
           <Routes>
-            <Route element={<Navigate to="/purchase-entry" replace />} path="/" />
-            <Route element={<PurchaseEntryForm />} path="/purchase-entry" />
-            <Route element={<PurchaseEntriesPage />} path="/purchase-entries" />
-            <Route element={<ManufacturingEntryForm />} path="/manufacturing-entry" />
-            <Route element={<ManufacturingEntriesPage />} path="/manufacturing-entries" />
-            <Route element={<ProductDepartureForm />} path="/product-departure" />
-            <Route element={<DispatchEntriesPage />} path="/dispatch-entries" />
-            <Route element={<PlaceholderPage title="Orders" />} path="/orders" />
-            <Route element={<PlaceholderPage title="Suppliers" />} path="/suppliers" />
-            <Route element={<PlaceholderPage title="Sheets" />} path="/sheets" />
-            <Route element={<PlaceholderPage title="Settings" />} path="/settings" />
+            <Route path="/login" element={<LoginPage />} />
+
+            <Route path="/" element={<Navigate to="/purchase-entry" replace />} />
+
+            <Route path="/purchase-entry" element={<PurchaseEntryForm />} />
+            <Route path="/purchase-entries" element={<PurchaseEntriesPage />} />
+            <Route path="/manufacturing-entry" element={<ManufacturingEntryForm />} />
+            <Route path="/manufacturing-entries" element={<ManufacturingEntriesPage />} />
+            <Route path="/product-departure" element={<ProductDepartureForm />} />
+            <Route path="/dispatch-entries" element={<DispatchEntriesPage />} />
+
+            <Route path="/orders" element={<PlaceholderPage title="Orders" />} />
+            <Route path="/suppliers" element={<PlaceholderPage title="Suppliers" />} />
+            <Route path="/sheets" element={<PlaceholderPage title="Sheets" />} />
+            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
           </Routes>
         </section>
       </div>
