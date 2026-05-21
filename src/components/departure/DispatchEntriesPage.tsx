@@ -15,7 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { fetchDispatchEntries, type DispatchEntry } from "@/lib/googleSheetApi";
+import {
+  deleteDispatchEntry,
+  fetchDispatchEntries,
+  type DispatchEntry,
+  updateDispatchEntry,
+} from "@/lib/googleSheetApi";
 
 const ENTRIES_PER_PAGE = 10;
 
@@ -42,12 +47,35 @@ function buildDispatchLabel(entry: DispatchEntry) {
   return [entry.productCategory, entry.productName, entry.productColor].filter(Boolean).join(" / ");
 }
 
+function normalizeTimeForInput(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  if (/^([01]\d|2[0-3]):([0-5]\d)$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  const match = trimmedValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    return trimmedValue;
+  }
+
+  const hours = Number(match[1]) % 12 + (match[3].toUpperCase() === "PM" ? 12 : 0);
+  return `${String(hours).padStart(2, "0")}:${match[2]}`;
+}
+
 export function DispatchEntriesPage() {
   const [entries, setEntries] = useState<DispatchEntry[]>([]);
   const [editingEntry, setEditingEntry] = useState<DispatchEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -97,26 +125,62 @@ export function DispatchEntriesPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleDelete = (entryId: string) => {
-    setEntries((current) => current.filter((entry) => entry.id !== entryId));
-    setEditingEntry((current) => (current?.id === entryId ? null : current));
-    toast("Delete action is not available in the sheet API yet.", {
-      icon: "!",
+  const handleDelete = async (entryId: string) => {
+    setDeletingEntryId(entryId);
+
+    try {
+      await deleteDispatchEntry(entryId);
+      setEntries((current) => current.filter((entry) => entry.id !== entryId));
+      setEditingEntry((current) => (current?.id === entryId ? null : current));
+      toast.success("Dispatch entry deleted successfully.");
+
+      void fetchDispatchEntries()
+        .then((dispatchEntries) => {
+          setEntries(dispatchEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete dispatch entry.");
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
+
+  const startEditing = (entry: DispatchEntry) => {
+    setEditingEntry({
+      ...entry,
+      time: normalizeTimeForInput(entry.time),
+      dispatchTime: normalizeTimeForInput(entry.dispatchTime),
     });
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingEntry) {
       return;
     }
 
-    setEntries((current) =>
-      current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
-    );
-    setEditingEntry(null);
-    toast("Update action is not available in the sheet API yet.", {
-      icon: "!",
-    });
+    setIsUpdating(true);
+
+    try {
+      await updateDispatchEntry(editingEntry);
+      setEntries((current) =>
+        current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
+      );
+      setEditingEntry(null);
+      toast.success("Dispatch entry updated successfully.");
+
+      void fetchDispatchEntries()
+        .then((dispatchEntries) => {
+          setEntries(dispatchEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update dispatch entry.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -299,6 +363,7 @@ export function DispatchEntriesPage() {
               <Field htmlFor="edit-dispatchTime" label="Dispatch Time">
                 <Input
                   id="edit-dispatchTime"
+                  type="time"
                   value={editingEntry.dispatchTime}
                   onChange={(event) =>
                     setEditingEntry((current) => current ? { ...current, dispatchTime: event.target.value } : current)
@@ -329,9 +394,9 @@ export function DispatchEntriesPage() {
               <Button onClick={() => setEditingEntry(null)} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} type="button">
+              <Button disabled={isUpdating} onClick={handleUpdate} type="button">
                 <Save />
-                Update entry
+                {isUpdating ? "Updating..." : "Update entry"}
               </Button>
             </div>
           </CardContent>
@@ -378,11 +443,12 @@ export function DispatchEntriesPage() {
                             size="icon"
                             type="button"
                             variant="outline"
-                            onClick={() => setEditingEntry(entry)}
+                            onClick={() => startEditing(entry)}
                           >
                             <Pencil />
                           </Button>
                           <Button
+                            disabled={deletingEntryId === entry.id}
                             size="icon"
                             type="button"
                             variant="destructive"
@@ -475,11 +541,12 @@ export function DispatchEntriesPage() {
                               size="icon"
                               type="button"
                               variant="outline"
-                              onClick={() => setEditingEntry(entry)}
+                              onClick={() => startEditing(entry)}
                             >
                               <Pencil />
                             </Button>
                             <Button
+                              disabled={deletingEntryId === entry.id}
                               size="icon"
                               type="button"
                               variant="destructive"

@@ -26,6 +26,7 @@ const epoxySandColorOptions = [
   "Savetrane",
   "Terracotta",
 ];
+const RECENT_PURCHASES_PAGE_SIZE = 3;
 
 const initialFormData = {
   date: "",
@@ -87,7 +88,6 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
       "Premix",
       "Byk",
       "Benton",
-      "Normal Water",
       "Urea (Technical Grade)",
       "Sulphamic Acid",
       "Hydrochloric Acid (32%)",
@@ -206,11 +206,17 @@ function readFilePayload(file: File) {
   });
 }
 
+function isPositiveNumber(value: string) {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue > 0;
+}
+
 export function PurchaseEntryForm() {
 
   const [formData, setFormData] = useState(initialFormData)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [recentPurchases, setRecentPurchases] = useState<PurchaseEntry[]>([]);
+  const [recentPurchasesPage, setRecentPurchasesPage] = useState(1);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -236,6 +242,18 @@ export function PurchaseEntryForm() {
       isMounted = false;
     };
   }, []);
+
+  const totalRecentPurchasePages = Math.max(1, Math.ceil(recentPurchases.length / RECENT_PURCHASES_PAGE_SIZE));
+  const visibleRecentPurchases = recentPurchases.slice(
+    (recentPurchasesPage - 1) * RECENT_PURCHASES_PAGE_SIZE,
+    recentPurchasesPage * RECENT_PURCHASES_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (recentPurchasesPage > totalRecentPurchasePages) {
+      setRecentPurchasesPage(totalRecentPurchasePages);
+    }
+  }, [recentPurchasesPage, totalRecentPurchasePages]);
 
   const config = useMemo(() => {
     return hasRawMaterialConfig(formData.rawMaterialName as RawMaterialOption)
@@ -268,17 +286,83 @@ export function PurchaseEntryForm() {
     }));
   };
 
+  const validateForm = () => {
+    if (!formData.date) {
+      return "Date is required.";
+    }
+
+    if (!formData.time) {
+      return "Time is required.";
+    }
+
+    if (!formData.rawMaterialName) {
+      return "Raw material name is required.";
+    }
+
+    if (config && !formData.packagingType) {
+      return `${config.label} is required.`;
+    }
+
+    if (level2Config && !formData.level2) {
+      return `${level2Config.label} is required.`;
+    }
+
+    if (level3Config && !formData.level3) {
+      return `${level3Config.label} is required.`;
+    }
+
+    if (shouldShowEpoxySandColorField && !formData.colorOfSandEpoxy) {
+      return "Color of sand (epoxy) is required.";
+    }
+
+    if (!isPositiveNumber(formData.quantityPurchased)) {
+      return "Quantity purchased must be greater than 0.";
+    }
+
+    if (!formData.unit) {
+      return "Unit is required.";
+    }
+
+    if (!formData.supplierName.trim()) {
+      return "Supplier name is required.";
+    }
+
+    if (!formData.invoiceNo.trim()) {
+      return "Bill / Invoice No. is required.";
+    }
+
+    if (!formData.unloadBy.trim()) {
+      return "Unload By is required.";
+    }
+
+    return "";
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setSubmitStatus("idle");
     setSubmitMessage("");
+
+    const validationMessage = validateForm();
+
+    if (validationMessage) {
+      setSubmitStatus("error");
+      setSubmitMessage(validationMessage);
+      toast.error(validationMessage);
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const filePayload = selectedFile ? await readFilePayload(selectedFile) : {};
       const submittedEntry: PurchaseEntry = {
         id: crypto.randomUUID(),
+        serialNo: "",
         ...formData,
+        purchaseStock: formData.quantityPurchased,
+        currentStock: "",
+        usedInProduction: "",
         attachFile: selectedFile?.name ?? "",
       };
 
@@ -287,7 +371,8 @@ export function PurchaseEntryForm() {
         ...filePayload,
       });
       const latestEntries = await fetchPurchaseEntries();
-      setRecentPurchases(latestEntries.slice(0, 5));
+      setRecentPurchases(latestEntries);
+      setRecentPurchasesPage(1);
       setFormData(initialFormData);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -667,7 +752,7 @@ export function PurchaseEntryForm() {
                 Saved purchase entries will appear here.
               </div>
             ) : (
-              recentPurchases.map((purchase) => {
+              visibleRecentPurchases.map((purchase) => {
                 const materialPath = [
                   purchase.rawMaterialName,
                   purchase.packagingType,
@@ -695,6 +780,29 @@ export function PurchaseEntryForm() {
                 );
               })
             )}
+            {recentPurchases.length > RECENT_PURCHASES_PAGE_SIZE ? (
+              <div className="flex items-center justify-between gap-2 border-t pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRecentPurchasesPage((page) => Math.max(1, page - 1))}
+                  disabled={recentPurchasesPage === 1}
+                >
+                  Prev
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {recentPurchasesPage} / {totalRecentPurchasePages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRecentPurchasesPage((page) => Math.min(totalRecentPurchasePages, page + 1))}
+                  disabled={recentPurchasesPage === totalRecentPurchasePages}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>

@@ -15,7 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchManufacturingEntries, type ManufacturingEntry } from "@/lib/googleSheetApi";
+import {
+  deleteManufacturingEntry,
+  fetchManufacturingEntries,
+  type ManufacturingEntry,
+  updateManufacturingEntry,
+} from "@/lib/googleSheetApi";
 
 const ENTRIES_PER_PAGE = 10;
 
@@ -48,6 +53,8 @@ export function ManufacturingEntriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -100,26 +107,54 @@ export function ManufacturingEntriesPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleDelete = (entryId: string) => {
-    setEntries((current) => current.filter((entry) => entry.id !== entryId));
-    setEditingEntry((current) => (current?.id === entryId ? null : current));
-    toast("Delete action is not available in the sheet API yet.", {
-      icon: "!",
-    });
+  const handleDelete = async (entryId: string) => {
+    setDeletingEntryId(entryId);
+
+    try {
+      await deleteManufacturingEntry(entryId);
+      setEntries((current) => current.filter((entry) => entry.id !== entryId));
+      setEditingEntry((current) => (current?.id === entryId ? null : current));
+      toast.success("Production entry deleted successfully.");
+
+      void fetchManufacturingEntries()
+        .then((manufacturingEntries) => {
+          setEntries(manufacturingEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete production entry.");
+    } finally {
+      setDeletingEntryId(null);
+    }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingEntry) {
       return;
     }
 
-    setEntries((current) =>
-      current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
-    );
-    setEditingEntry(null);
-    toast("Update action is not available in the sheet API yet.", {
-      icon: "!",
-    });
+    setIsUpdating(true);
+
+    try {
+      await updateManufacturingEntry(editingEntry);
+      setEntries((current) =>
+        current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
+      );
+      setEditingEntry(null);
+      toast.success("Production entry updated successfully.");
+
+      void fetchManufacturingEntries()
+        .then((manufacturingEntries) => {
+          setEntries(manufacturingEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update production entry.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -293,9 +328,9 @@ export function ManufacturingEntriesPage() {
               <Button onClick={() => setEditingEntry(null)} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} type="button">
+              <Button disabled={isUpdating} onClick={handleUpdate} type="button">
                 <Save />
-                Update entry
+                {isUpdating ? "Updating..." : "Update entry"}
               </Button>
             </div>
           </CardContent>
@@ -347,6 +382,7 @@ export function ManufacturingEntriesPage() {
                             <Pencil />
                           </Button>
                           <Button
+                            disabled={deletingEntryId === entry.id}
                             size="icon"
                             type="button"
                             variant="destructive"
@@ -449,6 +485,7 @@ export function ManufacturingEntriesPage() {
                               <Pencil />
                             </Button>
                             <Button
+                              disabled={deletingEntryId === entry.id}
                               size="icon"
                               type="button"
                               variant="destructive"

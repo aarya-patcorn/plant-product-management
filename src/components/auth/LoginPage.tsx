@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AUTH_STORAGE_KEY } from "@/lib/auth";
 import { loginUser } from "@/lib/googleSheetApi";
 
 const accessItems = ["Purchase register", "Production batches", "Product dispatch"];
-const AUTH_STORAGE_KEY = "inventory-auth-user";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ export function LoginPage() {
 
       window.localStorage.setItem(AUTH_STORAGE_KEY, formData.userId);
       toast.success("Login successful.");
-      navigate("/purchase-entry");
+      navigate("/purchase-entry", { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to login.");
     } finally {

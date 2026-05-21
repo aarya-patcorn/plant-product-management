@@ -56,6 +56,15 @@ function Field({
   );
 }
 
+function isPositiveNumber(value: string) {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue > 0;
+}
+
+function isDigitsOnly(value: string) {
+  return /^\d+$/.test(value.trim());
+}
+
 export function ProductDepartureForm() {
   const [formData, setFormData] = useState(initialFormData);
   const [productionEntries, setProductionEntries] = useState<ProductionMaterialLog[]>([]);
@@ -252,11 +261,101 @@ export function ProductDepartureForm() {
     }));
   };
 
+  const validateForm = () => {
+    if (!formData.date) {
+      return "Date is required.";
+    }
+
+    if (!formData.time) {
+      return "Time is required.";
+    }
+
+    if (!formData.challanNo.trim()) {
+      return "Challan No. is required.";
+    }
+
+    if (!formData.challanName.trim()) {
+      return "Challan name is required.";
+    }
+
+    if (!formData.vehicleNo.trim()) {
+      return "Vehicle No. is required.";
+    }
+
+    if (!formData.driverName.trim()) {
+      return "Driver name is required.";
+    }
+
+    if (!formData.driverContact.trim()) {
+      return "Driver contact is required.";
+    }
+
+    if (!isDigitsOnly(formData.driverContact)) {
+      return "Driver contact must contain only digits.";
+    }
+
+    if (!formData.dispatchTime) {
+      return "Dispatch time is required.";
+    }
+
+    if (!formData.dispatchSite.trim()) {
+      return "Dispatch site is required.";
+    }
+
+    if (!isPositiveNumber(formData.todayVehicleNo)) {
+      return "Today vehicle No. must be greater than 0.";
+    }
+
+    if (!formData.productCategory) {
+      return "Product category is required.";
+    }
+
+    if (!formData.productName) {
+      return "Product name is required.";
+    }
+
+    if (!formData.token) {
+      return "Token is required.";
+    }
+
+    if (!formData.productColor) {
+      return "Product color is required.";
+    }
+
+    if (!formData.bagSize) {
+      return "Bag size is required.";
+    }
+
+    if (!isPositiveNumber(formData.quantity)) {
+      return "Available stock must be greater than 0.";
+    }
+
+    if (!isPositiveNumber(formData.totalBags)) {
+      return "Departed bags must be greater than 0.";
+    }
+
+    if (Number(formData.totalBags) > Number(formData.quantity)) {
+      return "Departed bags cannot be greater than available stock.";
+    }
+
+    return "";
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setSubmitStatus("idle");
     setSubmitMessage("");
+
+    const validationMessage = validateForm();
+
+    if (validationMessage) {
+      setSubmitStatus("error");
+      setSubmitMessage(validationMessage);
+      toast.error(validationMessage);
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       await submitSheetEntry("dispatch", formData);

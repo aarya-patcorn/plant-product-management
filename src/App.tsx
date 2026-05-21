@@ -1,21 +1,21 @@
 import { useState } from "react";
 import {
-  ClipboardList,
-  Download,
   Factory,
-  FilePlus2,
   LayoutDashboard,
   LogOut,
   Menu,
   PackagePlus,
   Settings,
-  ShoppingCart,
   SendToBack,
-  Truck,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { LoginPage } from "@/components/auth/LoginPage";
+import { PrivateRoute, PublicRoute } from "@/components/auth/RouteGuards";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { InventoryEntriesPage } from "@/components/dashboard/InventoryEntriesPage";
+import { ProductionMaterialLogsPage } from "@/components/dashboard/ProductionMaterialLogsPage";
 import { DispatchEntriesPage } from "@/components/departure/DispatchEntriesPage";
 import { ProductDepartureForm } from "@/components/departure/ProductDepartureForm";
 import { ManufacturingEntryForm } from "@/components/manufacturing/ManufacturingEntryForm";
@@ -24,9 +24,7 @@ import { PurchaseEntryForm } from "@/components/purchase/PurchaseEntryForm";
 import { PurchaseEntriesPage } from "@/components/purchase/PurchaseEntriesPage";
 import { Button } from "@/components/ui/button";
 import newLogo from "@/assets/new_logo.png";
-import { LoginPage } from "./components/auth/LoginPage";
-
-const AUTH_STORAGE_KEY = "inventory-auth-user";
+import { AUTH_STORAGE_KEY } from "@/lib/auth";
 
 const navItems: Array<{ icon: LucideIcon; label: string; path: string }> = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -96,27 +94,26 @@ function SidebarNav({ onNavigate, onLogout }: { onNavigate?: () => void; onLogou
   );
 }
 
-function AppShell() {
+function AppShellLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const isPurchasePage = location.pathname === "/purchase-entry";
   const isPurchaseEntriesPage = location.pathname === "/purchase-entries";
+  const isInventoryEntriesPage = location.pathname === "/inventory-entries";
+  const isProductionMaterialLogsPage = location.pathname === "/production-material-logs";
   const isManufacturingPage = location.pathname === "/manufacturing-entry";
   const isManufacturingEntriesPage = location.pathname === "/manufacturing-entries";
   const isDeparturePage = location.pathname === "/product-departure";
   const isDispatchEntriesPage = location.pathname === "/dispatch-entries";
-  const isEntryPage =
-    isPurchasePage ||
-    isPurchaseEntriesPage ||
-    isManufacturingPage ||
-    isManufacturingEntriesPage ||
-    isDeparturePage ||
-    isDispatchEntriesPage;
   const pageTitle = isPurchasePage
     ? "Purchase Entry"
     : isPurchaseEntriesPage
       ? "Purchase Entries"
+      : isInventoryEntriesPage
+        ? "Inventory Entries"
+        : isProductionMaterialLogsPage
+          ? "Production Material Logs"
       : isManufacturingPage
         ? "Production Entry"
         : isManufacturingEntriesPage
@@ -193,45 +190,38 @@ function AppShell() {
           </header>
 
 
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-
-            <Route path="/" element={<Navigate to="/purchase-entry" replace />} />
-
-            <Route path="/purchase-entry" element={<PurchaseEntryForm />} />
-            <Route path="/purchase-entries" element={<PurchaseEntriesPage />} />
-            <Route path="/manufacturing-entry" element={<ManufacturingEntryForm />} />
-            <Route path="/manufacturing-entries" element={<ManufacturingEntriesPage />} />
-            <Route path="/product-departure" element={<ProductDepartureForm />} />
-            <Route path="/dispatch-entries" element={<DispatchEntriesPage />} />
-
-            <Route path="/orders" element={<PlaceholderPage title="Orders" />} />
-            <Route path="/suppliers" element={<PlaceholderPage title="Suppliers" />} />
-            <Route path="/sheets" element={<PlaceholderPage title="Sheets" />} />
-            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
-          </Routes>
+          <Outlet />
         </section>
       </div>
     </main>
   );
 }
 
-function ProtectedAppShell() {
-  const hasAuth = typeof window !== "undefined" && Boolean(window.localStorage.getItem(AUTH_STORAGE_KEY));
-
-  if (!hasAuth) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <AppShell />;
-}
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<LoginPage />} path="/login" />
-        <Route element={<ProtectedAppShell />} path="/*" />
+        <Route element={<PublicRoute />}>
+          <Route element={<LoginPage />} path="/login" />
+        </Route>
+
+        <Route element={<PrivateRoute />}>
+          <Route element={<AppShellLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/inventory-entries" element={<InventoryEntriesPage />} />
+            <Route path="/production-material-logs" element={<ProductionMaterialLogsPage />} />
+            <Route path="/purchase-entry" element={<PurchaseEntryForm />} />
+            <Route path="/purchase-entries" element={<PurchaseEntriesPage />} />
+            <Route path="/manufacturing-entry" element={<ManufacturingEntryForm />} />
+            <Route path="/manufacturing-entries" element={<ManufacturingEntriesPage />} />
+            <Route path="/product-departure" element={<ProductDepartureForm />} />
+            <Route path="/dispatch-entries" element={<DispatchEntriesPage />} />
+            <Route path="/orders" element={<PlaceholderPage title="Orders" />} />
+            <Route path="/suppliers" element={<PlaceholderPage title="Suppliers" />} />
+            <Route path="/sheets" element={<PlaceholderPage title="Sheets" />} />
+            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   );

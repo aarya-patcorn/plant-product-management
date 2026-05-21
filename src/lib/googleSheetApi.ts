@@ -4,6 +4,15 @@ const GOOGLE_SHEET_API_URL =
 type SheetFormType = "purchase" | "manufacturing" | "dispatch";
 type FormPayload = Record<string, unknown>;
 type SheetApiResponse = { message?: string; success?: boolean; status?: string; data?: unknown } | null;
+type SheetAction =
+  | SheetFormType
+  | "loginUser"
+  | "updatePurchaseEntry"
+  | "updateManufacturingEntry"
+  | "updateDispatchEntry"
+  | "deletePurchaseEntry"
+  | "deleteManufacturingEntry"
+  | "deleteDispatchEntry";
 
 type LoginPayload = {
   userId: string;
@@ -28,6 +37,7 @@ function getSheetApiErrorMessage(responseData: SheetApiResponse, fallback: strin
 
 export type PurchaseEntry = {
   id: string;
+  serialNo: string;
   date: string;
   time: string;
   rawMaterialName: string;
@@ -35,10 +45,13 @@ export type PurchaseEntry = {
   level2: string;
   level3: string;
   quantityPurchased: string;
+  purchaseStock: string;
   unit: string;
   supplierName: string;
   invoiceNo: string;
   unloadBy: string;
+  currentStock: string;
+  usedInProduction: string;
   attachFile: string;
   remarks: string;
 };
@@ -99,9 +112,37 @@ export type DispatchEntry = {
 
 
 export async function submitSheetEntry(formType: SheetFormType, payload: FormPayload) {
+  return postSheetAction(formType, payload, "Unable to save entry.");
+}
+
+export async function updatePurchaseEntry(payload: PurchaseEntry) {
+  return postSheetAction("updatePurchaseEntry", payload, "Unable to update purchase entry.");
+}
+
+export async function updateManufacturingEntry(payload: ManufacturingEntry) {
+  return postSheetAction("updateManufacturingEntry", payload, "Unable to update manufacturing entry.");
+}
+
+export async function updateDispatchEntry(payload: DispatchEntry) {
+  return postSheetAction("updateDispatchEntry", payload, "Unable to update dispatch entry.");
+}
+
+export async function deletePurchaseEntry(entryId: string) {
+  return postSheetAction("deletePurchaseEntry", { id: entryId }, "Unable to delete purchase entry.");
+}
+
+export async function deleteManufacturingEntry(entryId: string) {
+  return postSheetAction("deleteManufacturingEntry", { id: entryId }, "Unable to delete manufacturing entry.");
+}
+
+export async function deleteDispatchEntry(entryId: string) {
+  return postSheetAction("deleteDispatchEntry", { id: entryId }, "Unable to delete dispatch entry.");
+}
+
+async function postSheetAction(action: SheetAction, payload: FormPayload, fallbackMessage: string) {
   const formattedPayload = formatPayloadTimes(payload);
 
-  console.log(formattedPayload)
+  console.log("Submitting payload to Google Sheet API:", { action, payload: formattedPayload });
 
   const response = await fetch(GOOGLE_SHEET_API_URL, {
     method: "POST",
@@ -109,7 +150,7 @@ export async function submitSheetEntry(formType: SheetFormType, payload: FormPay
       "Content-Type": "text/plain;charset=utf-8",
     },
     body: JSON.stringify({
-      action: formType,
+      action,
       ...formattedPayload,
     }),
   });
@@ -118,42 +159,18 @@ export async function submitSheetEntry(formType: SheetFormType, payload: FormPay
   const responseData = responseText ? safeParseJson(responseText) : null;
 
   if (!response.ok) {
-    throw new Error(getSheetApiErrorMessage(responseData, responseText || "Unable to save entry."));
+    throw new Error(getSheetApiErrorMessage(responseData, responseText || fallbackMessage));
   }
 
   if (responseData?.success === false || responseData?.status === "error") {
-    throw new Error(getSheetApiErrorMessage(responseData, "Unable to save entry."));
+    throw new Error(getSheetApiErrorMessage(responseData, fallbackMessage));
   }
 
   return responseData;
 }
 
 export async function loginUser(payload: LoginPayload) {
-
-  console.log(payload)
-  const response = await fetch(GOOGLE_SHEET_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    body: JSON.stringify({
-      action: "loginUser",
-      ...payload,
-    }),
-  });
-
-  const responseText = await response.text();
-  const responseData = responseText ? safeParseJson(responseText) : null;
-
-  if (!response.ok) {
-    throw new Error(getSheetApiErrorMessage(responseData, responseText || "Unable to login."));
-  }
-
-  if (responseData?.success === false || responseData?.status === "error") {
-    throw new Error(getSheetApiErrorMessage(responseData, "Invalid user ID or password."));
-  }
-
-  return responseData;
+  return postSheetAction("loginUser", payload, "Invalid user ID or password.");
 }
 
 export async function fetchPurchaseEntries() {
@@ -270,17 +287,23 @@ function normalizePurchaseEntry(entry: unknown): PurchaseEntry {
 
   return {
     id: stringifyValue(record.id),
+    serialNo: stringifyValue(record.serialNo ?? record.serial_no),
     date: normalizeSheetDate(record.date),
     time: normalizeSheetTime(record.time),
     rawMaterialName: stringifyValue(record.rawMaterialName),
     packagingType: stringifyValue(record.packagingType),
     level2: stringifyValue(record.level2),
     level3: stringifyValue(record.level3),
-    quantityPurchased: stringifyValue(record.quantityPurchased),
+    quantityPurchased: stringifyValue(record.quantityPurchased ?? record.purchaseStock),
+    purchaseStock: stringifyValue(record.purchaseStock ?? record.quantityPurchased),
     unit: stringifyValue(record.unit),
     supplierName: stringifyValue(record.supplierName),
     invoiceNo: stringifyValue(record.invoiceNo),
     unloadBy: stringifyValue(record.unloadBy),
+    currentStock: stringifyValue(record.currentStock ?? record.current_quantity ?? record.availableStock),
+    usedInProduction: stringifyValue(
+      record.usedInProduction ?? record.usedInProductionStock ?? record.used_stock,
+    ),
     attachFile: stringifyValue(record.attachFile),
     remarks: stringifyValue(record.remarks),
   };

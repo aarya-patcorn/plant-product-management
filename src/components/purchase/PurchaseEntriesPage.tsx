@@ -16,7 +16,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { fetchPurchaseEntries, type PurchaseEntry } from "@/lib/googleSheetApi";
+import {
+  deletePurchaseEntry,
+  fetchPurchaseEntries,
+  type PurchaseEntry,
+  updatePurchaseEntry,
+} from "@/lib/googleSheetApi";
 
 const rawMaterialOptions = ["Cement", "Sand", "Chemical", "Packaging", "Spares", "Other"];
 const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "others"];
@@ -47,12 +52,35 @@ function buildMaterialLabel(entry: PurchaseEntry) {
     .join(" / ");
 }
 
+function normalizeTimeForInput(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  if (/^([01]\d|2[0-3]):([0-5]\d)$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  const match = trimmedValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    return trimmedValue;
+  }
+
+  const hours = Number(match[1]) % 12 + (match[3].toUpperCase() === "PM" ? 12 : 0);
+  return `${String(hours).padStart(2, "0")}:${match[2]}`;
+}
+
 export function PurchaseEntriesPage() {
   const [entries, setEntries] = useState<PurchaseEntry[]>([]);
   const [editingEntry, setEditingEntry] = useState<PurchaseEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -105,26 +133,61 @@ export function PurchaseEntriesPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleDelete = (entryId: string) => {
-    setEntries((current) => current.filter((entry) => entry.id !== entryId));
-    setEditingEntry((current) => (current?.id === entryId ? null : current));
-    toast("Delete action is not available in the sheet API yet.", {
-      icon: "!",
+  const handleDelete = async (entryId: string) => {
+    setDeletingEntryId(entryId);
+
+    try {
+      await deletePurchaseEntry(entryId);
+      setEntries((current) => current.filter((entry) => entry.id !== entryId));
+      setEditingEntry((current) => (current?.id === entryId ? null : current));
+      toast.success("Purchase entry deleted successfully.");
+
+      void fetchPurchaseEntries()
+        .then((purchaseEntries) => {
+          setEntries(purchaseEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete purchase entry.");
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
+
+  const startEditing = (entry: PurchaseEntry) => {
+    setEditingEntry({
+      ...entry,
+      time: normalizeTimeForInput(entry.time),
     });
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingEntry) {
       return;
     }
 
-    setEntries((current) =>
-      current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
-    );
-    setEditingEntry(null);
-    toast("Update action is not available in the sheet API yet.", {
-      icon: "!",
-    });
+    setIsUpdating(true);
+
+    try {
+      await updatePurchaseEntry(editingEntry);
+      setEntries((current) =>
+        current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
+      );
+      setEditingEntry(null);
+      toast.success("Purchase entry updated successfully.");
+
+      void fetchPurchaseEntries()
+        .then((purchaseEntries) => {
+          setEntries(purchaseEntries);
+          setLoadError("");
+        })
+        .catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update purchase entry.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -316,9 +379,9 @@ export function PurchaseEntriesPage() {
               <Button onClick={() => setEditingEntry(null)} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} type="button">
+              <Button disabled={isUpdating} onClick={handleUpdate} type="button">
                 <Save />
-                Update entry
+                {isUpdating ? "Updating..." : "Update entry"}
               </Button>
             </div>
           </CardContent>
@@ -365,11 +428,12 @@ export function PurchaseEntriesPage() {
                             size="icon"
                             type="button"
                             variant="outline"
-                            onClick={() => setEditingEntry(entry)}
+                            onClick={() => startEditing(entry)}
                           >
                             <Pencil />
                           </Button>
                           <Button
+                            disabled={deletingEntryId === entry.id}
                             size="icon"
                             type="button"
                             variant="destructive"
@@ -476,11 +540,12 @@ export function PurchaseEntriesPage() {
                               size="icon"
                               type="button"
                               variant="outline"
-                              onClick={() => setEditingEntry(entry)}
+                              onClick={() => startEditing(entry)}
                             >
                               <Pencil />
                             </Button>
                             <Button
+                              disabled={deletingEntryId === entry.id}
                               size="icon"
                               type="button"
                               variant="destructive"
