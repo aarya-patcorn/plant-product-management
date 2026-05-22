@@ -60,7 +60,15 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
     children: {
       PPC: {
         label: "Packaging Type",
-        options: ["Bulker", "Bags"],
+        options: ["Bulker"],
+      },
+      OPC: {
+        label: "Packaging Type",
+        options: ["Bulker"],
+      },
+      "White Cement": {
+        label: "Packaging Type",
+        options: ["Bag"],
       },
     },
   },
@@ -278,6 +286,35 @@ export function PurchaseEntryForm() {
     formData.packagingType === "FG" &&
     formData.level2 === "Epoxy" &&
     formData.level3 === "Coloured Sand";
+
+  useEffect(() => {
+    if (formData.rawMaterialName !== "Cement") {
+      return;
+    }
+
+    if (
+      (formData.packagingType === "PPC" || formData.packagingType === "OPC") &&
+      formData.level2 !== "Bulker"
+    ) {
+      setFormData((current) => ({
+        ...current,
+        level2: "Bulker",
+        level3: "",
+        colorOfSandEpoxy: "",
+        unloadBy: "",
+      }));
+    }
+
+    if (formData.packagingType === "White Cement" && formData.level2 !== "Bag") {
+      setFormData((current) => ({
+        ...current,
+        level2: "Bag",
+        level3: "",
+        colorOfSandEpoxy: "",
+        unloadBy: "",
+      }));
+    }
+  }, [formData.level2, formData.packagingType, formData.rawMaterialName]);
 
   const updateField = (name: keyof typeof formData, value: string) => {
     setFormData((current) => ({
@@ -502,6 +539,14 @@ export function PurchaseEntryForm() {
                     id="level2"
                     name="level2"
                     value={formData.level2}
+                    disabled={
+                      formData.rawMaterialName === "Cement" &&
+                      (
+                        formData.packagingType === "PPC" ||
+                        formData.packagingType === "OPC" ||
+                        formData.packagingType === "White Cement"
+                      )
+                    }
                     onChange={(e) => {
                       setFormData((current) => ({
                         ...current,
@@ -628,7 +673,7 @@ export function PurchaseEntryForm() {
 
                 {/* Cement + Bulker */}
                 {formData.rawMaterialName === "Cement" &&
-                  formData.packagingType === "Bulker" ? (
+                  formData.level2 === "Bulker" ? (
 
                   <select
                     id="unload-by"
@@ -638,13 +683,13 @@ export function PurchaseEntryForm() {
                     onChange={(e) => updateField("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
-                    <option value="Vasu">Vasu</option>
-                    <option value="Sujit">Sujit</option>
-                    <option value="Thalesh">Thalesh</option>
+                    <option value="Vasu">Chandrashekhar</option>
+                    <option value="Sujit">Anand</option>
+                    <option value="Thalesh">Sushil</option>
                   </select>
 
                 ) : formData.rawMaterialName === "Cement" &&
-                  formData.packagingType === "Bags" ? (
+                  formData.level2 === "Bag" ? (
 
                   /* Cement + Bag */
 
@@ -656,9 +701,9 @@ export function PurchaseEntryForm() {
                     onChange={(e) => updateField("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
-                    <option value="Anand">Anand</option>
-                    <option value="Chandrashekhar">Chandrashekhar</option>
-                    <option value="Sushil">Sushil</option>
+                    <option value="Anand">Sujeet</option>
+                    <option value="Chandrashekhar">Thailesh</option>
+                    <option value="Sushil">Vashu</option>
                   </select>
 
                 ) : formData.rawMaterialName === "Sand" ? (
@@ -673,9 +718,9 @@ export function PurchaseEntryForm() {
                     onChange={(e) => updateField("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
-                    <option value="Anand">Vasu</option>
-                    <option value="Chandrashekhar">Sujeet</option>
-                    <option value="Sushil">Thailesh </option>
+                    <option value="Anand">Sujeet</option>
+                    <option value="Chandrashekhar">Thailesh</option>
+                    <option value="Sushil">Vashu</option>
                   </select>
 
                 ) : (

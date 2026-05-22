@@ -81,7 +81,7 @@ export const groutProductColorMap: Record<string, string> = {
 
 export const groutRecipes: Record<string, RawMaterialRecipeItem[]> = {
   "300 kg White cement grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "180", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "180", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "120", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "4", materialUnit: "kg" },
   ],
@@ -98,7 +98,7 @@ export const groutRecipes: Record<string, RawMaterialRecipeItem[]> = {
     { rawMaterialName: "Chemical", packagingType: "Black Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "3500", materialUnit: "gm" },
   ],
   "150 kg coffee brown grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "70", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "70", materialUnit: "kg" },
     { rawMaterialName: "Cement", packagingType: "Grey", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "20", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "60", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "2", materialUnit: "kg" },
@@ -106,38 +106,38 @@ export const groutRecipes: Record<string, RawMaterialRecipeItem[]> = {
     { rawMaterialName: "Chemical", packagingType: "Black Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "700", materialUnit: "gm" },
   ],
   "150 kg light grey grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "20", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "20", materialUnit: "kg" },
     { rawMaterialName: "Cement", packagingType: "Grey", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "20", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "60", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "2", materialUnit: "kg" },
   ],
   "150 kg  grey grout": [
     { rawMaterialName: "Cement", packagingType: "Grey", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "50", materialUnit: "kg" },
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "70", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "70", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "60", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "2", materialUnit: "kg" },
   ],
   "150 kg RED grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "50", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "1.5", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Red Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "900", materialUnit: "gm" },
   ],
   "150 kg BLUE grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "50", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "1.5", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Blue Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "2000", materialUnit: "kg" },
   ],
   "150 kg GREEN grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "50", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "1.5", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Blue Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "1550", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Yellow Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "gm" },
   ],
   "150 kg YELLOW grout": [
-    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
+    { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "100", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Calcium Carbonate", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "50", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "K50 Chemical", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "1.5", materialUnit: "kg" },
     { rawMaterialName: "Chemical", packagingType: "Yellow Pigment", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "500", materialUnit: "gm" },
@@ -267,29 +267,29 @@ export const tileCleanerRecipes: Record<string, RawMaterialRecipeItem[]> = {
 export const tileAdhesiveRecipes: Record<string, Record<string, RawMaterialRecipeItem[]>> = {
   White: {
     "K90": [
-      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "275", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "275", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "White", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "9", materialUnit: "kg" },
     ],
     "K80": [
-      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "White", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "275", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "4.5", materialUnit: "kg" },
     ],
     "K60": [
-      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "White", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "275", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "4.5", materialUnit: "kg" },
     ],
     "Kamdhenu X": [
-      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "White Cement", level2: "Bag", level3: "", colorOfSandEpoxy: "", materialQuantity: "225", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "White", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "275", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "4.5", materialUnit: "kg" },
     ],
   },
   Grey: {
     "K90": [
-      { rawMaterialName: "Cement", packagingType: "OPC", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "18", materialUnit: "kg" },
     ],
@@ -309,7 +309,7 @@ export const tileAdhesiveRecipes: Record<string, Record<string, RawMaterialRecip
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "4", materialUnit: "kg" },
     ],
     "Kamdhenu X": [
-      { rawMaterialName: "Cement", packagingType: "OPC", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "500", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "500", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Premix", level2: "", level3: "", colorOfSandEpoxy: "", materialQuantity: "36", materialUnit: "kg" },
     ],
