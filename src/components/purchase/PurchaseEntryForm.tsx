@@ -673,9 +673,9 @@ export function PurchaseEntryForm() {
                     onChange={(e) => updateField("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
-                    <option value="Anand">Anand</option>
-                    <option value="Chandrashekhar">Chandrashekhar</option>
-                    <option value="Sushil">Sushil</option>
+                    <option value="Anand">Vasu</option>
+                    <option value="Chandrashekhar">Sujeet</option>
+                    <option value="Sushil">Thailesh </option>
                   </select>
 
                 ) : (
