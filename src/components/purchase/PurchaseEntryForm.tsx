@@ -35,6 +35,7 @@ const initialFormData = {
   packagingType: "",
   level2: "",
   level3: "",
+  packaging: "",
   colorOfSandEpoxy: "",
   quantityPurchased: "",
   unit: "",
@@ -85,27 +86,52 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
   },
 
   Chemical: {
-    label: "Select Chemical",
+    label: "Select Chemical Type",
     options: [
-      "Calcium Carbonate",
-      "Black Pigment",
-      "Red pigment",
-      "K50 Chemical",
-      "Blue pigment",
-      "Yellow pigment",
-      "Premix",
-      "Byk",
-      "Benton",
-      "Urea (Technical Grade)",
-      "Sulphamic Acid",
-      "Hydrochloric Acid (32%)",
-      "Citric Acid",
-      "2-Butoxyethanol",
-      "Cocamidopropyl Betaine",
-      "Alphox-200",
-      "Xanthan Gum",
-      "Fragrance & Dye"
+      "Epoxy",
+      "Tile Cleaner",
+      "Tile Adhesive",
     ],
+    children: {
+      Epoxy: {
+        label: "Select Chemical",
+        options: [
+          "Resin",
+          "Byk",
+          "Benton",
+          "White Colour Sand",
+          "Black Colour Sand",
+          "Ivory Colour Sand",
+          "Blue Colour Sand",
+          "Slate Grey Colour Sand",
+          "Light Grey Colour Sand",
+          "Dark Grey Colour Sand",
+          "Coffee Brown Colour Sand",
+          "Jaisalmer Colour Sand",
+          "Sabal Colour Sand",
+          "Savetrane Colour Sand",
+          "Terracotta Colour Sand",
+        ],
+      },
+      "Tile Cleaner": {
+        label: "Select Chemical",
+        options: [
+          "Urea (Technical Grade)",
+          "Sulphamic Acid",
+          "Hydrochloric Acid (32%)",
+          "Citric Acid",
+          "2-Butoxyethanol",
+          "Cocamidopropyl Betaine",
+          "Alphox-200",
+          "Xanthan Gum",
+          "Fragrance & Dye",
+        ],
+      },
+      "Tile Adhesive": {
+        label: "Select Chemical",
+        options: ["K50", "K60", "K80", "K90", "KX"],
+      },
+    },
   },
 
   Packaging: {
@@ -126,7 +152,7 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
         children: {
           Adhesive: {
             label: "Packaging Size",
-            options: ["20KG Bag", "50KG Bag", "Token"],
+            options: ["20KG Bag", "50KG Bag"],
           },
 
           "Tile Grout": {
@@ -287,6 +313,13 @@ export function PurchaseEntryForm() {
     formData.level2 === "Epoxy" &&
     formData.level3 === "Coloured Sand";
 
+  const shouldShowPackagingBagField =
+    formData.rawMaterialName === "Packaging" &&
+    formData.packagingType === "FG" &&
+    formData.level2 === "Adhesive";
+
+  const packagingBagOptions = ["K50", "K60", "K70", "K80", "K90", "Kamdhenu X"];
+
   useEffect(() => {
     if (formData.rawMaterialName !== "Cement") {
       return;
@@ -344,7 +377,11 @@ export function PurchaseEntryForm() {
       return `${level2Config.label} is required.`;
     }
 
-    if (level3Config && !formData.level3) {
+    if (shouldShowPackagingBagField && !formData.packagingBag) {
+      return "Packaging bag is required.";
+    }
+
+    if (level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && !formData.level3) {
       return `${level3Config.label} is required.`;
     }
 
@@ -484,6 +521,7 @@ export function PurchaseEntryForm() {
                       packagingType: "",
                       level2: "",
                       level3: "",
+                      packagingBag: "",
                       colorOfSandEpoxy: "",
                       unloadBy: "",
                     }))
@@ -514,6 +552,7 @@ export function PurchaseEntryForm() {
                         packagingType: e.target.value,
                         level2: "",
                         level3: "",
+                        packagingBag: "",
                         colorOfSandEpoxy: "",
                         unloadBy: "",
                       }))
@@ -552,6 +591,7 @@ export function PurchaseEntryForm() {
                         ...current,
                         level2: e.target.value,
                         level3: "",
+                        packagingBag: "",
                         colorOfSandEpoxy: "",
                       }))
                     }}
@@ -570,7 +610,34 @@ export function PurchaseEntryForm() {
               )}
 
               {/* LEVEL 3 */}
-              {level3Config && (
+              {shouldShowPackagingBagField && (
+                <Field htmlFor="packagingBag" label="Packaging Bag">
+                  <Select
+                    id="packagingBag"
+                    name="packagingBag"
+                    value={formData.packagingBag}
+                    onChange={(e) =>
+                      setFormData((current) => ({
+                        ...current,
+                        packagingBag: e.target.value,
+                        level3: "",
+                      }))
+                    }
+                  >
+                    <option value="" disabled>
+                      Select Packaging Bag
+                    </option>
+
+                    {packagingBagOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
+              {level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && (
                 <Field htmlFor="level3" label={level3Config.label}>
                   <Select
                     id="level3"
@@ -802,6 +869,7 @@ export function PurchaseEntryForm() {
                   purchase.rawMaterialName,
                   purchase.packagingType,
                   purchase.level2,
+                  purchase.packagingBag,
                   purchase.level3,
                 ].filter(Boolean).join(" / ");
                 const quantity = [purchase.quantityPurchased, purchase.unit].filter(Boolean).join(" ");

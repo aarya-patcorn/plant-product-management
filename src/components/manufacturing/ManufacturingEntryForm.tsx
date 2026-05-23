@@ -43,8 +43,18 @@ const initialFormData = {
   bagSize: "",
   totalBagsProduced: "",
   wastageQty: "",
+  wastageReason: "",
   remarks: "",
 };
+
+const initialRawMaterials = [
+  {
+    rawMaterialName: "",
+    packagingType: "",
+    materialQuantity: "",
+    materialUnit: "",
+  },
+];
 
 const getTotalBagsProduced = (tphBatch: string, bagSize: string) => {
   if (tphBatch === "2TPH" && bagSize === "20kg") return "50";
@@ -134,14 +144,7 @@ export function ManufacturingEntryForm() {
   const [recentBatches, setRecentBatches] = useState<ManufacturingEntry[]>([]);
   const [recentBatchesPage, setRecentBatchesPage] = useState(1);
 
-  const [rawMaterials, setRawMaterials] = useState([
-    {
-      rawMaterialName: "",
-      packagingType: "",
-      materialQuantity: "",
-      materialUnit: "",
-    },
-  ]);
+  const [rawMaterials, setRawMaterials] = useState(initialRawMaterials);
 
   const updateRawMaterialField = (
     index: number,
@@ -200,7 +203,15 @@ export function ManufacturingEntryForm() {
             ? tileAdhesiveWhiteProducts
             : isTileAdhesiveProduct && selectedColor === "Gray"
               ? tileAdhesiveGrayProducts
-              : [];
+          : [];
+  const bagSizeLabel =
+    formData.productCategory === "Epoxy"
+      ? "Bucket Size"
+      : formData.productCategory === "Tile Cleaner"
+        ? "Can Size"
+        : formData.productCategory === "Grout"
+          ? "Pouch Size"
+          : "Bag Size";
   const isRecipeLocked = isTileAdhesiveProduct || selectedProductCategory === "Grout";
   const totalRecentBatchPages = Math.max(1, Math.ceil(recentBatches.length / RECENT_BATCHES_PAGE_SIZE));
   const visibleRecentBatches = recentBatches.slice(
@@ -500,6 +511,7 @@ export function ManufacturingEntryForm() {
       }
 
       setFormData(initialFormData);
+      setRawMaterials(initialRawMaterials);
       toast.success("Production entry saved successfully.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save production entry.";
@@ -531,6 +543,7 @@ export function ManufacturingEntryForm() {
             className="grid gap-5"
             onReset={() => {
               setFormData(initialFormData);
+              setRawMaterials(initialRawMaterials);
               setSubmitStatus("idle");
               setSubmitMessage("");
             }}
@@ -766,7 +779,7 @@ export function ManufacturingEntryForm() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Field htmlFor="bagSize" label="Bag Size">
+              <Field htmlFor="bagSize" label={bagSizeLabel}>
                 <Select
                   id="bagSize"
                   name="bagSize"
@@ -782,7 +795,7 @@ export function ManufacturingEntryForm() {
                   }}
                 >
                   <option value="" disabled>
-                    Select Bag Size
+                    Select {bagSizeLabel}
                   </option>
 
                   {/* Bondure */}
@@ -852,6 +865,16 @@ export function ManufacturingEntryForm() {
                 type="number"
                 value={formData.wastageQty}
                 onChange={(e) => updateField("wastageQty", e.target.value)}
+              />
+            </Field>
+
+            <Field htmlFor="wastageReason" label="Wastage Reason">
+              <Textarea
+                id="wastageReason"
+                name="wastageReason"
+                placeholder="Add reason for wastage"
+                value={formData.wastageReason}
+                onChange={(e) => updateField("wastageReason", e.target.value)}
               />
             </Field>
 

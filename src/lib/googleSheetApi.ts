@@ -44,6 +44,7 @@ export type PurchaseEntry = {
   packagingType: string;
   level2: string;
   level3: string;
+  packagingBag: string;
   quantityPurchased: string;
   purchaseStock: string;
   unit: string;
@@ -68,6 +69,7 @@ export type ManufacturingEntry = {
   bagSize: string;
   totalBagsProduced: string;
   wastageQty: string;
+  wastageReason: string;
   rawMaterialNames: string;
   rawMaterialQty: string;
   rawMaterialUnits: string;
@@ -294,6 +296,7 @@ function normalizePurchaseEntry(entry: unknown): PurchaseEntry {
     packagingType: stringifyValue(record.packagingType),
     level2: stringifyValue(record.level2),
     level3: stringifyValue(record.level3),
+    packagingBag: stringifyValue(record.packagingBag),
     quantityPurchased: stringifyValue(record.quantityPurchased ?? record.purchaseStock),
     purchaseStock: stringifyValue(record.purchaseStock ?? record.quantityPurchased),
     unit: stringifyValue(record.unit),
