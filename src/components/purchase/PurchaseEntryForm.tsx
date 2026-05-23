@@ -35,7 +35,7 @@ const initialFormData = {
   packagingType: "",
   level2: "",
   level3: "",
-  packaging: "",
+  packagingBag: "",
   colorOfSandEpoxy: "",
   quantityPurchased: "",
   unit: "",
