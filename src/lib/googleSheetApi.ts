@@ -327,6 +327,7 @@ function normalizeManufacturingEntry(entry: unknown): ManufacturingEntry {
     bagSize: stringifyValue(record.bagSize),
     totalBagsProduced: stringifyValue(record.totalBagsProduced),
     wastageQty: stringifyValue(record.wastageQty),
+    wastageReason: stringifyValue(record.wastageReason),
     rawMaterialNames: stringifyValue(record.rawMaterialNames),
     rawMaterialQty: stringifyValue(record.rawMaterialQty),
     rawMaterialUnits: stringifyValue(record.rawMaterialUnits),
