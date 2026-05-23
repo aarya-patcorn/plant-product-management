@@ -45,6 +45,7 @@ export type PurchaseEntry = {
   level2: string;
   level3: string;
   packagingBag: string;
+  bucketSize: string;
   quantityPurchased: string;
   purchaseStock: string;
   unit: string;
@@ -297,6 +298,7 @@ function normalizePurchaseEntry(entry: unknown): PurchaseEntry {
     level2: stringifyValue(record.level2),
     level3: stringifyValue(record.level3),
     packagingBag: stringifyValue(record.packagingBag),
+    bucketSize: stringifyValue(record.bucketSize),
     quantityPurchased: stringifyValue(record.quantityPurchased ?? record.purchaseStock),
     purchaseStock: stringifyValue(record.purchaseStock ?? record.quantityPurchased),
     unit: stringifyValue(record.unit),

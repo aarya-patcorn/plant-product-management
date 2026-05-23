@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchPurchaseEntries, submitSheetEntry, type PurchaseEntry } from "@/lib/googleSheetApi";
 
-const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "others"];
+const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "ml", "others"];
 const materialOptions = ["Cement", "Sand", "Chemical", "Packaging", "Spares", "Other"];
 const epoxySandColorOptions = [
   "White",
@@ -27,6 +27,19 @@ const epoxySandColorOptions = [
   "Terracotta",
 ];
 const RECENT_PURCHASES_PAGE_SIZE = 3;
+const OTHER_OPTION = "__other__";
+const purchaseOtherFields = [
+  "rawMaterialName",
+  "packagingType",
+  "level2",
+  "packagingBag",
+  "level3",
+  "bucketSize",
+  "colorOfSandEpoxy",
+  "unit",
+  "unloadBy",
+] as const;
+type PurchaseOtherField = (typeof purchaseOtherFields)[number];
 
 const initialFormData = {
   date: "",
@@ -36,6 +49,7 @@ const initialFormData = {
   level2: "",
   level3: "",
   packagingBag: "",
+  bucketSize: "",
   colorOfSandEpoxy: "",
   quantityPurchased: "",
   unit: "",
@@ -88,9 +102,10 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
   Chemical: {
     label: "Select Chemical Type",
     options: [
+      "Tile Adhesive",
+      "Tile Grout",
       "Epoxy",
       "Tile Cleaner",
-      "Tile Adhesive",
     ],
     children: {
       Epoxy: {
@@ -125,11 +140,20 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
           "Alphox-200",
           "Xanthan Gum",
           "Fragrance & Dye",
+          "Isopropyl Alcohol (IPA 99%)",
+          "Sodium Gluconate",
+          "Benzalkonium Chloride (BKC)",
+          "Premium Fragrance & Dye",
+          "Alcohol Ethoxylate"
         ],
       },
       "Tile Adhesive": {
         label: "Select Chemical",
         options: ["K50", "K60", "K80", "K90", "KX"],
+      },
+      "Tile Grout": {
+        label: "Select Chemical",
+        options: ["Calcium Carbonate", "Yellow Pigment", "Black Pigment", "Red Pigment", "Blue Pigment", ],
       },
     },
   },
@@ -142,17 +166,53 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
       FG: {
         label: "FG Product",
         options: [
-          "Adhesive",
+          "Tile Adhesive",
           "Tile Grout",
           "Epoxy",
           "Tile Cleaner",
-          "Block Joint",
+          "Bondure",
         ],
 
         children: {
-          Adhesive: {
+          "Tile Adhesive": {
             label: "Packaging Size",
-            options: ["20KG Bag", "50KG Bag"],
+            options: ["20kg", "50kg", "Coupan"],
+            children: {
+              K50: {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+              K60: {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+              K70: {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+              K80: {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+              K90: {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+              "Kamdhenu X": {
+                label: "Packaging Size",
+                options: ["20kg", "50kg", "Coupan"],
+              },
+            },
+          },
+          Bondure: {
+            label: "Packaging Size",
+            options: ["40 KG"],
+            children: {
+              Bondure: {
+                label: "Packaging Size",
+                options: ["40 KG"],
+              },
+            },
           },
 
           "Tile Grout": {
@@ -178,12 +238,7 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
 
           "Tile Cleaner": {
             label: "Packaging Material",
-            options: ["Bucket", "Cap", "Sticker", "Seal"],
-          },
-
-          "Block Joint": {
-            label: "Packaging",
-            options: ["40KG Bag"],
+            options: ["Bucket", "Sticker", "Seal"],
           },
         },
       },
@@ -198,6 +253,15 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
 
 const hasRawMaterialConfig = (value: RawMaterialOption): value is RawMaterialName =>
   value !== "" && value !== "Other" && value in rawMaterialConfig;
+
+const initialPurchaseOtherState = Object.fromEntries(
+  purchaseOtherFields.map((field) => [field, false]),
+) as Record<PurchaseOtherField, boolean>;
+
+function getOptionsWithOther(options: string[]) {
+  const normalizedOptions = options.filter((option) => option.toLowerCase() !== "other" && option.toLowerCase() !== "others");
+  return [...normalizedOptions, "Other"];
+}
 
 
 function Field({
@@ -248,6 +312,7 @@ function isPositiveNumber(value: string) {
 export function PurchaseEntryForm() {
 
   const [formData, setFormData] = useState(initialFormData)
+  const [otherSelections, setOtherSelections] = useState(initialPurchaseOtherState);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [recentPurchases, setRecentPurchases] = useState<PurchaseEntry[]>([]);
   const [recentPurchasesPage, setRecentPurchasesPage] = useState(1);
@@ -301,24 +366,32 @@ export function PurchaseEntryForm() {
       : undefined;
   }, [config, formData.packagingType])
 
+  const shouldShowPackagingBagField =
+    formData.rawMaterialName === "Packaging" &&
+    formData.packagingType === "FG" &&
+    (formData.level2 === "Tile Adhesive" || formData.level2 === "Bondure");
+
+  const packagingBagLookupKey = shouldShowPackagingBagField ? formData.packagingBag : formData.level2;
+
   const level3Config = useMemo(() => {
     return level2Config && "children" in level2Config
-      ? level2Config.children?.[formData.level2 as keyof typeof level2Config.children]
+      ? level2Config.children?.[packagingBagLookupKey as keyof typeof level2Config.children]
       : undefined;
-  }, [level2Config, formData.level2])
+  }, [level2Config, packagingBagLookupKey])
 
   const shouldShowEpoxySandColorField =
     formData.rawMaterialName === "Packaging" &&
     formData.packagingType === "FG" &&
     formData.level2 === "Epoxy" &&
     formData.level3 === "Coloured Sand";
-
-  const shouldShowPackagingBagField =
+  const shouldShowTileCleanerBucketSizeField =
     formData.rawMaterialName === "Packaging" &&
     formData.packagingType === "FG" &&
-    formData.level2 === "Adhesive";
-
-  const packagingBagOptions = ["K50", "K60", "K70", "K80", "K90", "Kamdhenu X"];
+    formData.level2 === "Tile Cleaner" &&
+    formData.level3 === "Bucket";
+  const packagingBagOptions =
+    formData.level2 === "Bondure" ? ["Bondure"] : ["K50", "K60", "K70", "K80", "K90", "Kamdhenu X"];
+  const bucketSizeOptions = ["1L", "5L"];
 
   useEffect(() => {
     if (formData.rawMaterialName !== "Cement") {
@@ -334,7 +407,16 @@ export function PurchaseEntryForm() {
         level2: "Bulker",
         level3: "",
         colorOfSandEpoxy: "",
+        bucketSize: "",
         unloadBy: "",
+      }));
+      setOtherSelections((current) => ({
+        ...current,
+        level2: false,
+        level3: false,
+        colorOfSandEpoxy: false,
+        bucketSize: false,
+        unloadBy: false,
       }));
     }
 
@@ -344,10 +426,44 @@ export function PurchaseEntryForm() {
         level2: "Bag",
         level3: "",
         colorOfSandEpoxy: "",
+        bucketSize: "",
         unloadBy: "",
+      }));
+      setOtherSelections((current) => ({
+        ...current,
+        level2: false,
+        level3: false,
+        colorOfSandEpoxy: false,
+        bucketSize: false,
+        unloadBy: false,
       }));
     }
   }, [formData.level2, formData.packagingType, formData.rawMaterialName]);
+
+  useEffect(() => {
+    if (!shouldShowPackagingBagField) {
+      return;
+    }
+
+    if (formData.level2 === "Bondure") {
+      setFormData((current) => {
+        if (current.packagingBag === "Bondure" && current.level3 === "40 KG") {
+          return current;
+        }
+
+        return {
+          ...current,
+          packagingBag: "Bondure",
+          level3: "40 KG",
+        };
+      });
+      setOtherSelections((current) => ({
+        ...current,
+        packagingBag: false,
+        level3: false,
+      }));
+    }
+  }, [formData.level2, shouldShowPackagingBagField, formData.packagingBag, formData.level3]);
 
   const updateField = (name: keyof typeof formData, value: string) => {
     setFormData((current) => ({
@@ -355,6 +471,47 @@ export function PurchaseEntryForm() {
       [name]: value,
     }));
   };
+
+  const getSelectValue = (field: PurchaseOtherField, value: string) =>
+    otherSelections[field] ? OTHER_OPTION : value;
+
+  const handleSelectChange = (
+    field: PurchaseOtherField,
+    value: string,
+    fieldsToClear: PurchaseOtherField[] = [],
+    extraUpdates: Partial<typeof initialFormData> = {},
+  ) => {
+    const isOtherSelection = value === OTHER_OPTION;
+
+    setOtherSelections((current) => {
+      const next = { ...current, [field]: isOtherSelection };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = false;
+      });
+      return next;
+    });
+
+    setFormData((current) => {
+      const next = { ...current, ...extraUpdates };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = "";
+      });
+      next[field] = isOtherSelection ? "" : value;
+      return next;
+    });
+  };
+
+  const renderOtherInput = (field: PurchaseOtherField, label: string, placeholder: string) =>
+    otherSelections[field] ? (
+      <Field htmlFor={`${field}-other`} label={`${label} (Other)`}>
+        <Input
+          id={`${field}-other`}
+          value={formData[field]}
+          placeholder={placeholder}
+          onChange={(e) => updateField(field, e.target.value)}
+        />
+      </Field>
+    ) : null;
 
   const validateForm = () => {
     if (!formData.date) {
@@ -383,6 +540,10 @@ export function PurchaseEntryForm() {
 
     if (level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && !formData.level3) {
       return `${level3Config.label} is required.`;
+    }
+
+    if (shouldShowTileCleanerBucketSizeField && !formData.bucketSize) {
+      return "Bucket size is required.";
     }
 
     if (shouldShowEpoxySandColorField && !formData.colorOfSandEpoxy) {
@@ -448,6 +609,7 @@ export function PurchaseEntryForm() {
       setRecentPurchases(latestEntries);
       setRecentPurchasesPage(1);
       setFormData(initialFormData);
+      setOtherSelections(initialPurchaseOtherState);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -481,6 +643,7 @@ export function PurchaseEntryForm() {
             className="grid gap-5"
             onReset={() => {
               setFormData(initialFormData);
+              setOtherSelections(initialPurchaseOtherState);
               setSelectedFile(null);
               setSubmitStatus("idle");
               setSubmitMessage("");
@@ -513,31 +676,35 @@ export function PurchaseEntryForm() {
                 <Select
                   id="raw-material-name"
                   name="rawMaterialName"
-                  value={formData.rawMaterialName}
-                  onChange={(e) => {
-                    setFormData((current) => ({
-                      ...current,
-                      rawMaterialName: e.target.value,
-                      packagingType: "",
-                      level2: "",
-                      level3: "",
-                      packagingBag: "",
-                      colorOfSandEpoxy: "",
-                      unloadBy: "",
-                    }))
-                  }}
+                  value={getSelectValue("rawMaterialName", formData.rawMaterialName)}
+                  onChange={(e) =>
+                    handleSelectChange(
+                      "rawMaterialName",
+                      e.target.value,
+                      [
+                        "packagingType",
+                        "level2",
+                        "level3",
+                        "packagingBag",
+                        "bucketSize",
+                        "colorOfSandEpoxy",
+                        "unloadBy",
+                      ],
+                    )
+                  }
                 >
                   <option value="" disabled>
                     Select Raw Material
                   </option>
 
-                  {materialOptions.map((option) => (
-                    <option key={option} value={option}>
+                  {getOptionsWithOther(materialOptions).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                       {option}
                     </option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("rawMaterialName", "Raw Material Name", "Enter raw material name")}
 
               {/* LEVEL 1 */}
               {config && (
@@ -545,31 +712,28 @@ export function PurchaseEntryForm() {
                   <Select
                     id="level1"
                     name="packagingType"
-                    value={formData.packagingType}
-                    onChange={(e) => {
-                      setFormData((current) => ({
-                        ...current,
-                        packagingType: e.target.value,
-                        level2: "",
-                        level3: "",
-                        packagingBag: "",
-                        colorOfSandEpoxy: "",
-                        unloadBy: "",
-                      }))
-                    }}
+                    value={getSelectValue("packagingType", formData.packagingType)}
+                    onChange={(e) =>
+                      handleSelectChange(
+                        "packagingType",
+                        e.target.value,
+                        ["level2", "level3", "packagingBag", "bucketSize", "colorOfSandEpoxy", "unloadBy"],
+                      )
+                    }
                   >
                     <option value="" disabled>
                       Select {config.label}
                     </option>
 
-                    {config.options.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(config.options).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
                   </Select>
                 </Field>
               )}
+              {renderOtherInput("packagingType", config?.label ?? "Packaging Type", "Enter value")}
 
               {/* LEVEL 2 */}
               {level2Config && (
@@ -577,7 +741,7 @@ export function PurchaseEntryForm() {
                   <Select
                     id="level2"
                     name="level2"
-                    value={formData.level2}
+                    value={getSelectValue("level2", formData.level2)}
                     disabled={
                       formData.rawMaterialName === "Cement" &&
                       (
@@ -586,28 +750,27 @@ export function PurchaseEntryForm() {
                         formData.packagingType === "White Cement"
                       )
                     }
-                    onChange={(e) => {
-                      setFormData((current) => ({
-                        ...current,
-                        level2: e.target.value,
-                        level3: "",
-                        packagingBag: "",
-                        colorOfSandEpoxy: "",
-                      }))
-                    }}
+                    onChange={(e) =>
+                      handleSelectChange(
+                        "level2",
+                        e.target.value,
+                        ["level3", "packagingBag", "bucketSize", "colorOfSandEpoxy"],
+                      )
+                    }
                   >
                     <option value="" disabled>
                       Select {level2Config.label}
                     </option>
 
-                    {level2Config.options.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(level2Config.options).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
                   </Select>
                 </Field>
               )}
+              {renderOtherInput("level2", level2Config?.label ?? "Level 2", "Enter value")}
 
               {/* LEVEL 3 */}
               {shouldShowPackagingBagField && (
@@ -615,74 +778,88 @@ export function PurchaseEntryForm() {
                   <Select
                     id="packagingBag"
                     name="packagingBag"
-                    value={formData.packagingBag}
-                    onChange={(e) =>
-                      setFormData((current) => ({
-                        ...current,
-                        packagingBag: e.target.value,
-                        level3: "",
-                      }))
-                    }
+                    value={getSelectValue("packagingBag", formData.packagingBag)}
+                    disabled={formData.level2 === "Bondure"}
+                    onChange={(e) => handleSelectChange("packagingBag", e.target.value, ["bucketSize", "level3"])}
                   >
                     <option value="" disabled>
                       Select Packaging Bag
                     </option>
 
-                    {packagingBagOptions.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(packagingBagOptions).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
                   </Select>
                 </Field>
               )}
+              {renderOtherInput("packagingBag", "Packaging Bag", "Enter packaging bag")}
 
               {level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && (
                 <Field htmlFor="level3" label={level3Config.label}>
                   <Select
                     id="level3"
                     name="level3"
-                    value={formData.level3}
-                    onChange={(e) =>
-                      setFormData((current) => ({
-                        ...current,
-                        level3: e.target.value,
-                        colorOfSandEpoxy: "",
-                      }))
-                    }
+                    value={getSelectValue("level3", formData.level3)}
+                    disabled={formData.level2 === "Bondure"}
+                    onChange={(e) => handleSelectChange("level3", e.target.value, ["bucketSize", "colorOfSandEpoxy"])}
                   >
                     <option value="" disabled>
                       Select {level3Config.label}
                     </option>
 
-                    {level3Config.options.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(level3Config.options).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
                   </Select>
                 </Field>
               )}
+              {renderOtherInput("level3", level3Config?.label ?? "Level 3", "Enter value")}
+
+              {shouldShowTileCleanerBucketSizeField && (
+                <Field htmlFor="bucketSize" label="Bucket Size">
+                  <Select
+                    id="bucketSize"
+                    name="bucketSize"
+                    value={getSelectValue("bucketSize", formData.bucketSize)}
+                    onChange={(e) => handleSelectChange("bucketSize", e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select Bucket Size
+                    </option>
+                    {getOptionsWithOther(bucketSizeOptions).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+              {renderOtherInput("bucketSize", "Bucket Size", "Enter bucket size")}
 
               {shouldShowEpoxySandColorField && (
                 <Field htmlFor="color-of-sand-epoxy" label="Color Of Sand (Epoxy)">
                   <Select
                     id="color-of-sand-epoxy"
                     name="colorOfSandEpoxy"
-                    value={formData.colorOfSandEpoxy}
-                    onChange={(e) => updateField("colorOfSandEpoxy", e.target.value)}
+                    value={getSelectValue("colorOfSandEpoxy", formData.colorOfSandEpoxy)}
+                    onChange={(e) => handleSelectChange("colorOfSandEpoxy", e.target.value)}
                   >
                     <option value="" disabled>
                       Select sand color
                     </option>
-                    {epoxySandColorOptions.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(epoxySandColorOptions).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
                   </Select>
                 </Field>
               )}
+              {renderOtherInput("colorOfSandEpoxy", "Color Of Sand (Epoxy)", "Enter sand color")}
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -702,17 +879,18 @@ export function PurchaseEntryForm() {
                 <Select
                   id="unit"
                   name="unit"
-                  value={formData.unit}
-                  onChange={(e) => updateField("unit", e.target.value)}
+                  value={getSelectValue("unit", formData.unit)}
+                  onChange={(e) => handleSelectChange("unit", e.target.value)}
                 >
                   <option value="" disabled>
                     Unit
                   </option>
-                  {unitOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                  {getOptionsWithOther(unitOptions).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("unit", "Unit", "Enter unit")}
 
               <Field htmlFor="supplier-name" label="Supplier Name">
                 <Input
@@ -746,13 +924,14 @@ export function PurchaseEntryForm() {
                     id="unload-by"
                     name="unloadBy"
                     className="w-full h-10 border rounded-md px-3"
-                    value={formData.unloadBy}
-                    onChange={(e) => updateField("unloadBy", e.target.value)}
+                    value={getSelectValue("unloadBy", formData.unloadBy)}
+                    onChange={(e) => handleSelectChange("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
                     <option value="Vasu">Chandrashekhar</option>
                     <option value="Sujit">Anand</option>
                     <option value="Thalesh">Sushil</option>
+                    <option value={OTHER_OPTION}>Other</option>
                   </select>
 
                 ) : formData.rawMaterialName === "Cement" &&
@@ -764,13 +943,14 @@ export function PurchaseEntryForm() {
                     id="unload-by"
                     name="unloadBy"
                     className="w-full h-10 border rounded-md px-3"
-                    value={formData.unloadBy}
-                    onChange={(e) => updateField("unloadBy", e.target.value)}
+                    value={getSelectValue("unloadBy", formData.unloadBy)}
+                    onChange={(e) => handleSelectChange("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
                     <option value="Anand">Sujeet</option>
                     <option value="Chandrashekhar">Thailesh</option>
                     <option value="Sushil">Vashu</option>
+                    <option value={OTHER_OPTION}>Other</option>
                   </select>
 
                 ) : formData.rawMaterialName === "Sand" ? (
@@ -781,13 +961,14 @@ export function PurchaseEntryForm() {
                     id="unload-by"
                     name="unloadBy"
                     className="w-full h-10 border rounded-md px-3"
-                    value={formData.unloadBy}
-                    onChange={(e) => updateField("unloadBy", e.target.value)}
+                    value={getSelectValue("unloadBy", formData.unloadBy)}
+                    onChange={(e) => handleSelectChange("unloadBy", e.target.value)}
                   >
                     <option value="">Select Person</option>
                     <option value="Anand">Sujeet</option>
                     <option value="Chandrashekhar">Thailesh</option>
                     <option value="Sushil">Vashu</option>
+                    <option value={OTHER_OPTION}>Other</option>
                   </select>
 
                 ) : (
@@ -803,6 +984,7 @@ export function PurchaseEntryForm() {
                   />
                 )}
               </Field>
+              {renderOtherInput("unloadBy", "Unload By", "Enter person or team name")}
 
               <Field htmlFor="attach-file" label="Attach File">
                 <Input

@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchManufacturingEntries, submitSheetEntry, type ManufacturingEntry } from "@/lib/googleSheetApi";
 import {
+  bondureRecipes,
   epoxyColors,
   epoxyProductColorMap,
   epoxyProducts,
@@ -29,6 +30,16 @@ const tileAdhesiveWhiteProducts = ["K60", "K80", "K90", "Kamdhenu X"];
 const tileAdhesiveGrayProducts = ["K50", "K60", "K80", "K90", "Kamdhenu X"];
 const tileCleanerProducts = ["Crystal X 1L", "Shine X 1L", "Crystal X 5L", "Shine X 5L"];
 const RECENT_BATCHES_PAGE_SIZE = 3;
+const OTHER_OPTION = "__other__";
+const manufacturingOtherFields = [
+  "tphBatch",
+  "productCategory",
+  "finishedProductName",
+  "token",
+  "color",
+  "bagSize",
+] as const;
+type ManufacturingOtherField = (typeof manufacturingOtherFields)[number];
 
 const initialFormData = {
   productionDate: "",
@@ -42,6 +53,8 @@ const initialFormData = {
   finishedProductName: "",
   bagSize: "",
   totalBagsProduced: "",
+  sticker: "",
+  sponge: "",
   wastageQty: "",
   wastageReason: "",
   remarks: "",
@@ -135,9 +148,19 @@ function Field({
   );
 }
 
+const initialManufacturingOtherState = Object.fromEntries(
+  manufacturingOtherFields.map((field) => [field, false]),
+) as Record<ManufacturingOtherField, boolean>;
+
+function getOptionsWithOther(options: string[]) {
+  const normalizedOptions = options.filter((option) => option.toLowerCase() !== "other" && option.toLowerCase() !== "others");
+  return [...normalizedOptions, "Other"];
+}
+
 export function ManufacturingEntryForm() {
 
   const [formData, setFormData] = useState(initialFormData)
+  const [otherSelections, setOtherSelections] = useState(initialManufacturingOtherState);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,6 +190,47 @@ export function ManufacturingEntryForm() {
       [name]: value,
     }));
   };
+
+  const getSelectValue = (field: ManufacturingOtherField, value: string) =>
+    otherSelections[field] ? OTHER_OPTION : value;
+
+  const handleSelectChange = (
+    field: ManufacturingOtherField,
+    value: string,
+    fieldsToClear: ManufacturingOtherField[] = [],
+    extraUpdates: Partial<typeof initialFormData> = {},
+  ) => {
+    const isOtherSelection = value === OTHER_OPTION;
+
+    setOtherSelections((current) => {
+      const next = { ...current, [field]: isOtherSelection };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = false;
+      });
+      return next;
+    });
+
+    setFormData((current) => {
+      const next = { ...current, ...extraUpdates };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = "";
+      });
+      next[field] = isOtherSelection ? "" : value;
+      return next;
+    });
+  };
+
+  const renderOtherInput = (field: ManufacturingOtherField, label: string, placeholder: string) =>
+    otherSelections[field] ? (
+      <Field htmlFor={`${field}-other`} label={`${label} (Other)`}>
+        <Input
+          id={`${field}-other`}
+          value={formData[field]}
+          placeholder={placeholder}
+          onChange={(e) => updateField(field, e.target.value)}
+        />
+      </Field>
+    ) : null;
 
   const selectedColor =
     formData.tphBatch === "1TPH"
@@ -212,7 +276,10 @@ export function ManufacturingEntryForm() {
         : formData.productCategory === "Grout"
           ? "Pouch Size"
           : "Bag Size";
-  const isRecipeLocked = isTileAdhesiveProduct || selectedProductCategory === "Grout";
+  const isRecipeLocked =
+    isTileAdhesiveProduct ||
+    selectedProductCategory === "Bondure" ||
+    selectedProductCategory === "Grout";
   const totalRecentBatchPages = Math.max(1, Math.ceil(recentBatches.length / RECENT_BATCHES_PAGE_SIZE));
   const visibleRecentBatches = recentBatches.slice(
     (recentBatchesPage - 1) * RECENT_BATCHES_PAGE_SIZE,
@@ -268,6 +335,14 @@ export function ManufacturingEntryForm() {
 
     setRawMaterials(recipe);
   }, [selectedProductCategory, selectedColor, formData.finishedProductName]);
+
+  useEffect(() => {
+    if (selectedProductCategory !== "Bondure") {
+      return;
+    }
+
+    setRawMaterials(bondureRecipes);
+  }, [selectedProductCategory]);
 
   useEffect(() => {
     if (selectedProductCategory !== "Grout" || !formData.finishedProductName) {
@@ -377,6 +452,27 @@ export function ManufacturingEntryForm() {
     }));
   }, [selectedProductCategory, formData.finishedProductName, formData.bagSize]);
 
+  useEffect(() => {
+    if (selectedProductCategory !== "Epoxy") {
+      setFormData((current) =>
+        current.sticker || current.sponge ? { ...current, sticker: "", sponge: "" } : current,
+      );
+      return;
+    }
+
+    const hiddenPackagingValue = formData.totalBagsProduced.trim();
+
+    setFormData((current) =>
+      current.sticker === hiddenPackagingValue && current.sponge === hiddenPackagingValue
+        ? current
+        : {
+            ...current,
+            sticker: hiddenPackagingValue,
+            sponge: hiddenPackagingValue,
+          },
+    );
+  }, [selectedProductCategory, formData.totalBagsProduced]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitStatus("idle");
@@ -424,14 +520,6 @@ export function ManufacturingEntryForm() {
 
     if (isTileAdhesiveProduct && !formData.token) {
       const message = "Token is required for tile adhesive batches.";
-      setSubmitStatus("error");
-      setSubmitMessage(message);
-      toast.error(message);
-      return;
-    }
-
-    if (!selectedColor.trim()) {
-      const message = "Color is required.";
       setSubmitStatus("error");
       setSubmitMessage(message);
       toast.error(message);
@@ -492,6 +580,8 @@ export function ManufacturingEntryForm() {
         ...formData,
         color: selectedColor,
         productCategory: selectedProductCategory,
+        sticker: selectedProductCategory === "Epoxy" ? formData.sticker : "",
+        sponge: selectedProductCategory === "Epoxy" ? formData.sponge : "",
         rawMaterials,
       });
 
@@ -511,6 +601,7 @@ export function ManufacturingEntryForm() {
       }
 
       setFormData(initialFormData);
+      setOtherSelections(initialManufacturingOtherState);
       setRawMaterials(initialRawMaterials);
       toast.success("Production entry saved successfully.");
     } catch (error) {
@@ -543,6 +634,7 @@ export function ManufacturingEntryForm() {
             className="grid gap-5"
             onReset={() => {
               setFormData(initialFormData);
+              setOtherSelections(initialManufacturingOtherState);
               setRawMaterials(initialRawMaterials);
               setSubmitStatus("idle");
               setSubmitMessage("");
@@ -564,9 +656,35 @@ export function ManufacturingEntryForm() {
                 <Select
                   id="tphBatch"
                   name="tphBatch"
-                  value={formData.tphBatch}
+                  value={getSelectValue("tphBatch", formData.tphBatch)}
                   onChange={(e) => {
                     const tphBatch = e.target.value;
+                    const isOtherSelection = tphBatch === OTHER_OPTION;
+
+                    setOtherSelections((current) => ({
+                      ...current,
+                      tphBatch: isOtherSelection,
+                      productCategory: false,
+                      finishedProductName: false,
+                      bagSize: false,
+                      token: false,
+                      color: false,
+                    }));
+
+                    if (isOtherSelection) {
+                      setFormData({
+                        ...formData,
+                        tphBatch: "",
+                        productCategory: "",
+                        color: "",
+                        finishedProductName: "",
+                        bagSize: "",
+                        token: "",
+                      });
+                      setRawMaterials(initialRawMaterials);
+                      return;
+                    }
+
                     const defaults = getBatchDefaults(tphBatch);
 
                     setFormData({
@@ -578,19 +696,21 @@ export function ManufacturingEntryForm() {
                       bagSize: "",
                       token: defaults.productCategory === "Tile Adhesive" ? "" : "N/A",
                     });
+                    setRawMaterials(initialRawMaterials);
                   }}
                 >
                   <option value="" disabled>
                     Select TPH/Batch
                   </option>
 
-                  <option value="1TPH">1TPH</option>
-                  <option value="2TPH">2TPH</option>
-                  <option value="Manual Blender">Manual Blender</option>
-                  <option value="Sigma Mixer">Sigma Mixer</option>
-                  <option value="Manual Hand Mixer">Manual Hand Mixer</option>
+                  {getOptionsWithOther(["1TPH", "2TPH", "Manual Blender", "Sigma Mixer", "Manual Hand Mixer"]).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                      {option}
+                    </option>
+                  ))}
                 </Select>
               </Field>
+              {renderOtherInput("tphBatch", "TPH / Batch", "Enter batch type")}
 
               <Field htmlFor="batchNo" label="Batch No.">
                 <Input
@@ -608,16 +728,28 @@ export function ManufacturingEntryForm() {
                 <Select
                   id="productCategory"
                   name="productCategory"
-                  value={formData.productCategory}
-                  onChange={(e) =>
+                  value={getSelectValue("productCategory", formData.productCategory)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const isOtherSelection = value === OTHER_OPTION;
+
+                    setOtherSelections((current) => ({
+                      ...current,
+                      productCategory: isOtherSelection,
+                      finishedProductName: false,
+                      bagSize: false,
+                      color: false,
+                    }));
+
                     setFormData({
                       ...formData,
-                      productCategory: e.target.value,
-                      color: formData.tphBatch === "2TPH" ? "Gray" : formData.color,
+                      productCategory: isOtherSelection ? "" : value,
+                      color: isOtherSelection ? "" : formData.tphBatch === "2TPH" ? "Gray" : formData.color,
                       finishedProductName: "",
                       bagSize: "",
-                    })
-                  }
+                    });
+                    setRawMaterials(initialRawMaterials);
+                  }}
                   disabled={
                     isProductCategoryLocked || !formData.tphBatch
                   }
@@ -626,13 +758,14 @@ export function ManufacturingEntryForm() {
                     Select category
                   </option>
 
-                  {productCategoryOptions.map((option) => (
-                    <option key={option} value={option}>
+                  {getOptionsWithOther(productCategoryOptions).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                       {option}
                     </option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("productCategory", "Product Category", "Enter product category")}
               <Field
                 htmlFor="finishedProductName"
                 label="Finished Product Name"
@@ -641,12 +774,15 @@ export function ManufacturingEntryForm() {
                   <Select
                     id="finishedProductName"
                     name="finishedProductName"
-                    value={formData.finishedProductName}
-                    onChange={(e) => updateField("finishedProductName", e.target.value)}
+                    value={getSelectValue("finishedProductName", formData.finishedProductName)}
+                    onChange={(e) => {
+                      handleSelectChange("finishedProductName", e.target.value);
+                      setRawMaterials(initialRawMaterials);
+                    }}
                   >
                     <option value="" disabled>Select Finished Product</option>
-                    {finishedProductOptions.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(finishedProductOptions).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
@@ -661,34 +797,40 @@ export function ManufacturingEntryForm() {
                   />
                 )}
               </Field>
+              {finishedProductOptions.length > 0 &&
+                renderOtherInput("finishedProductName", "Finished Product Name", "Enter finished product")}
 
               <Field htmlFor="token" label="Token">
                 <Select
                   id="token"
                   name="token"
-                  value={formData.token}
-                  onChange={(e) => updateField("token", e.target.value)}
+                  value={getSelectValue("token", formData.token)}
+                  onChange={(e) => handleSelectChange("token", e.target.value)}
                   disabled={!isTileAdhesiveProduct}
                 >
                   {isTileAdhesiveProduct ? (
                     <>
                       <option value="" disabled>Select Token</option>
-                      <option value="Coupan">Coupan</option>
-                      <option value="Non-Coupan">Non-Coupan</option>
+                      {getOptionsWithOther(["Coupan", "Non-Coupan"]).map((option) => (
+                        <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                          {option}
+                        </option>
+                      ))}
                     </>
                   ) : (
                     <option value="N/A">N/A</option>
                   )}
                 </Select>
               </Field>
+              {isTileAdhesiveProduct && renderOtherInput("token", "Token", "Enter token")}
 
               <Field htmlFor="color" label="Color (auto-filled for TPH batches)">
                 {colorOptions.length > 0 || isColorDisabled ? (
                   <Select
                     id="color"
                     name="color"
-                    value={selectedColor || ""}
-                    onChange={(e) => updateField("color", e.target.value)}
+                    value={getSelectValue("color", selectedColor || "")}
+                    onChange={(e) => handleSelectChange("color", e.target.value)}
                     disabled={isColorDisabled}
                   >
                     <option value="" disabled>
@@ -697,8 +839,8 @@ export function ManufacturingEntryForm() {
                     {isColorDisabled && selectedColor ? (
                       <option value={selectedColor}>{selectedColor}</option>
                     ) : null}
-                    {colorOptions.map((option) => (
-                      <option key={option} value={option}>
+                    {getOptionsWithOther(colorOptions).map((option) => (
+                      <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                         {option}
                       </option>
                     ))}
@@ -713,6 +855,7 @@ export function ManufacturingEntryForm() {
                   />
                 )}
               </Field>
+              {colorOptions.length > 0 && !isColorDisabled && renderOtherInput("color", "Color", "Enter color")}
             </div>
 
             <div className="space-y-4">
@@ -783,14 +926,20 @@ export function ManufacturingEntryForm() {
                 <Select
                   id="bagSize"
                   name="bagSize"
-                  value={formData.bagSize}
+                  value={getSelectValue("bagSize", formData.bagSize)}
                   onChange={(e) => {
                     const bagSize = e.target.value;
+                    const isOtherSelection = bagSize === OTHER_OPTION;
+
+                    setOtherSelections((current) => ({
+                      ...current,
+                      bagSize: isOtherSelection,
+                    }));
 
                     setFormData({
                       ...formData,
-                      bagSize,
-                      totalBagsProduced: getTotalBagsProduced(formData.tphBatch, bagSize),
+                      bagSize: isOtherSelection ? "" : bagSize,
+                      totalBagsProduced: isOtherSelection ? "" : getTotalBagsProduced(formData.tphBatch, bagSize),
                     });
                   }}
                 >
@@ -801,30 +950,44 @@ export function ManufacturingEntryForm() {
                   {/* Bondure */}
                   {formData.productCategory === "Bondure" && (
                     <>
-                      <option value="40kg">40KG</option>
+                      {getOptionsWithOther(["40kg"]).map((option) => (
+                        <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                          {option === "40kg" ? "40KG" : option}
+                        </option>
+                      ))}
                     </>
                   )}
 
                   {/* Epoxy */}
                   {formData.productCategory === "Epoxy" && (
                     <>
-                      <option value="1kg">1KG</option>
-                      <option value="5kg">5KG</option>
+                      {getOptionsWithOther(["1kg", "5kg"]).map((option) => (
+                        <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                          {option === "1kg" ? "1KG" : option === "5kg" ? "5KG" : option}
+                        </option>
+                      ))}
                     </>
                   )}
 
                   {/* Grout */}
                   {formData.productCategory === "Grout" && (
                     <>
-                      <option value="1kg">1KG</option>
+                      {getOptionsWithOther(["Pouch 1KG"]).map((option) => (
+                        <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                          {option === "Pouch 1KG" ? "1KG" : option}
+                        </option>
+                      ))}
                     </>
                   )}
 
                   {/* Tile Cleaner */}
                   {formData.productCategory === "Tile Cleaner" && (
                     <>
-                      <option value="1L">1L</option>
-                      <option value="5L">5L</option>
+                      {getOptionsWithOther(["1L", "5L"]).map((option) => (
+                        <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                          {option}
+                        </option>
+                      ))}
                     </>
                   )}
 
@@ -836,12 +999,16 @@ export function ManufacturingEntryForm() {
                     "Tile Cleaner",
                   ].includes(formData.productCategory) && (
                       <>
-                        <option value="20kg">20KG</option>
-                        <option value="50kg">50KG</option>
+                        {getOptionsWithOther(["20kg", "50kg"]).map((option) => (
+                          <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
+                            {option === "20kg" ? "20KG" : option === "50kg" ? "50KG" : option}
+                          </option>
+                        ))}
                       </>
                     )}
                 </Select>
               </Field>
+              {renderOtherInput("bagSize", bagSizeLabel, `Enter ${bagSizeLabel.toLowerCase()}`)}
               <Field htmlFor="totalBagsProduced" label="Total Bags Produced">
                 <Input
                   id="totalBagsProduced"
@@ -887,6 +1054,13 @@ export function ManufacturingEntryForm() {
                 onChange={(e) => updateField("remarks", e.target.value)}
               />
             </Field>
+
+            {formData.productCategory === "Epoxy" && (
+              <>
+                <input name="sticker" type="hidden" value={formData.sticker} />
+                <input name="sponge" type="hidden" value={formData.sponge} />
+              </>
+            )}
 
             <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
               {submitStatus === "error" && submitMessage && (

@@ -16,6 +16,9 @@ import {
 } from "@/lib/googleSheetApi";
 
 const RECENT_DEPARTURES_PAGE_SIZE = 3;
+const OTHER_OPTION = "__other__";
+const dispatchOtherFields = ["productCategory", "productName", "token", "productColor", "bagSize"] as const;
+type DispatchOtherField = (typeof dispatchOtherFields)[number];
 
 const initialFormData = {
   date: "",
@@ -56,6 +59,15 @@ function Field({
   );
 }
 
+const initialDispatchOtherState = Object.fromEntries(
+  dispatchOtherFields.map((field) => [field, false]),
+) as Record<DispatchOtherField, boolean>;
+
+function getOptionsWithOther(options: string[]) {
+  const normalizedOptions = options.filter((option) => option.toLowerCase() !== "other" && option.toLowerCase() !== "others");
+  return [...normalizedOptions, "Other"];
+}
+
 function isPositiveNumber(value: string) {
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue) && parsedValue > 0;
@@ -67,6 +79,7 @@ function isDigitsOnly(value: string) {
 
 export function ProductDepartureForm() {
   const [formData, setFormData] = useState(initialFormData);
+  const [otherSelections, setOtherSelections] = useState(initialDispatchOtherState);
   const [productionEntries, setProductionEntries] = useState<ProductionMaterialLog[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productLoadError, setProductLoadError] = useState("");
@@ -192,10 +205,21 @@ export function ProductDepartureForm() {
     (recentDeparturesPage - 1) * RECENT_DEPARTURES_PAGE_SIZE,
     recentDeparturesPage * RECENT_DEPARTURES_PAGE_SIZE,
   );
+  const isManualProductSelection =
+    otherSelections.productCategory ||
+    otherSelections.productName ||
+    otherSelections.productColor ||
+    otherSelections.bagSize;
 
   useEffect(() => {
     if (!selectedProductionEntry) {
-      setFormData((current) => (current.quantity ? { ...current, quantity: "" } : current));
+      if (!isManualProductSelection) {
+        setFormData((current) => (current.quantity ? { ...current, quantity: "" } : current));
+      }
+      return;
+    }
+
+    if (isManualProductSelection) {
       return;
     }
 
@@ -203,7 +227,7 @@ export function ProductDepartureForm() {
       ...current,
       quantity: String(selectedProductionEntry.currentQuantity),
     }));
-  }, [selectedProductionEntry]);
+  }, [isManualProductSelection, selectedProductionEntry]);
 
   useEffect(() => {
     let isMounted = true;
@@ -260,6 +284,47 @@ export function ProductDepartureForm() {
       [name]: value,
     }));
   };
+
+  const getSelectValue = (field: DispatchOtherField, value: string) =>
+    otherSelections[field] ? OTHER_OPTION : value;
+
+  const handleSelectChange = (
+    field: DispatchOtherField,
+    value: string,
+    fieldsToClear: DispatchOtherField[] = [],
+    extraUpdates: Partial<typeof initialFormData> = {},
+  ) => {
+    const isOtherSelection = value === OTHER_OPTION;
+
+    setOtherSelections((current) => {
+      const next = { ...current, [field]: isOtherSelection };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = false;
+      });
+      return next;
+    });
+
+    setFormData((current) => {
+      const next = { ...current, ...extraUpdates };
+      fieldsToClear.forEach((fieldName) => {
+        next[fieldName] = "";
+      });
+      next[field] = isOtherSelection ? "" : value;
+      return next;
+    });
+  };
+
+  const renderOtherInput = (field: DispatchOtherField, label: string, placeholder: string) =>
+    otherSelections[field] ? (
+      <Field htmlFor={`${field}-other`} label={`${label} (Other)`}>
+        <Input
+          id={`${field}-other`}
+          value={formData[field]}
+          placeholder={placeholder}
+          onChange={(e) => updateField(field, e.target.value)}
+        />
+      </Field>
+    ) : null;
 
   const validateForm = () => {
     if (!formData.date) {
@@ -360,6 +425,7 @@ export function ProductDepartureForm() {
     try {
       await submitSheetEntry("dispatch", formData);
       setFormData(initialFormData);
+      setOtherSelections(initialDispatchOtherState);
       toast.success("Dispatch entry saved successfully.");
     } catch (error) {
       setSubmitStatus("error");
@@ -389,6 +455,7 @@ export function ProductDepartureForm() {
             className="grid gap-5"
             onReset={() => {
               setFormData(initialFormData);
+              setOtherSelections(initialDispatchOtherState);
               setSubmitStatus("idle");
               setSubmitMessage("");
             }}
@@ -504,121 +571,110 @@ export function ProductDepartureForm() {
                 <Select
                   id="product-category"
                   name="productCategory"
-                  value={formData.productCategory}
+                  value={getSelectValue("productCategory", formData.productCategory)}
                   onChange={(e) =>
-                    setFormData((current) => ({
-                      ...current,
-                      productCategory: e.target.value,
-                      token: "",
-                      productName: "",
-                      productColor: "",
-                      bagSize: "",
-                      quantity: "",
-                    }))
+                    handleSelectChange(
+                      "productCategory",
+                      e.target.value,
+                      ["token", "productName", "productColor", "bagSize"],
+                      { quantity: "" },
+                    )
                   }
-                  disabled={isLoadingProducts || productCategories.length === 0}
+                  disabled={isLoadingProducts}
                 >
                   <option value="" disabled>
                     {isLoadingProducts ? "Loading categories..." : "Select category"}
                   </option>
-                  {productCategories.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                  {getOptionsWithOther(productCategories).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("productCategory", "Product Category", "Enter product category")}
 
               <Field htmlFor="product-name" label="Product Name">
                 <Select
                   id="product-name"
                   name="productName"
-                  value={formData.productName}
+                  value={getSelectValue("productName", formData.productName)}
                   onChange={(e) =>
-                    setFormData((current) => ({
-                      ...current,
-                      productName: e.target.value,
-                      token: "",
-                      productColor: "",
-                      bagSize: "",
-                      quantity: "",
-                    }))
+                    handleSelectChange(
+                      "productName",
+                      e.target.value,
+                      ["token", "productColor", "bagSize"],
+                      { quantity: "" },
+                    )
                   }
-                  disabled={!formData.productCategory || productNames.length === 0}
+                  disabled={!formData.productCategory}
                 >
                   <option value="" disabled>
                     Select product
                   </option>
-                  {productNames.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                  {getOptionsWithOther(productNames).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("productName", "Product Name", "Enter product name")}
 
               <Field htmlFor="token" label="Token">
                 <Select
                   id="token"
                   name="token"
-                  value={formData.token}
-                  onChange={(e) => updateField("token", e.target.value)}
-                  disabled={!formData.productName || tokenOptions.length === 0}
+                  value={getSelectValue("token", formData.token)}
+                  onChange={(e) => handleSelectChange("token", e.target.value)}
+                  disabled={!formData.productName}
                 >
                   <option value="" disabled>
                     {!formData.productName ? "Select product first" : "Select token type"}
                   </option>
-                  {tokenOptions.map((option) => (
-                    <option key={option} value={option}>
+                  {getOptionsWithOther(tokenOptions).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>
                       {option}
                     </option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("token", "Token", "Enter token")}
 
 
               <Field htmlFor="product-color" label="Product Color">
                 <Select
                   id="product-color"
                   name="productColor"
-                  value={formData.productColor}
+                  value={getSelectValue("productColor", formData.productColor)}
                   onChange={(e) =>
-                    setFormData((current) => ({
-                      ...current,
-                      productColor: e.target.value,
-                      token: "",
-                      bagSize: "",
-                      quantity: "",
-                    }))
+                    handleSelectChange("productColor", e.target.value, ["token", "bagSize"], { quantity: "" })
                   }
-                  disabled={!formData.productName || productColors.length === 0}
+                  disabled={!formData.productName}
                 >
                   <option value="" disabled>
                     Select color
                   </option>
-                  {productColors.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                  {getOptionsWithOther(productColors).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("productColor", "Product Color", "Enter product color")}
 
               <Field htmlFor="bag-size" label="Bag Size">
                 <Select
                   id="bag-size"
                   name="bagSize"
-                  value={formData.bagSize}
-                  onChange={(e) =>
-                    setFormData((current) => ({
-                      ...current,
-                      bagSize: e.target.value,
-                    }))
-                  }
-                  disabled={!formData.productColor || bagSizes.length === 0}
+                  value={getSelectValue("bagSize", formData.bagSize)}
+                  onChange={(e) => handleSelectChange("bagSize", e.target.value)}
+                  disabled={!formData.productColor}
                 >
                   <option value="" disabled>
                     Select bag size
                   </option>
-                  {bagSizes.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                  {getOptionsWithOther(bagSizes).map((option) => (
+                    <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
+              {renderOtherInput("bagSize", "Bag Size", "Enter bag size")}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -630,8 +686,9 @@ export function ProductDepartureForm() {
                   placeholder="0"
                   step="0.01"
                   type="number"
-                  readOnly
+                  readOnly={!isManualProductSelection}
                   value={formData.quantity}
+                  onChange={(e) => updateField("quantity", e.target.value)}
                 />
               </Field>
               <Field htmlFor="total-bags" label="Departed Bags">
