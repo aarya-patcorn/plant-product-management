@@ -45,6 +45,84 @@ function buildProductLabel(entry: ProductionMaterialLog) {
   return [entry.productCategory, entry.productName, entry.productColor].filter(Boolean).join(" / ");
 }
 
+function normalizeLabel(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function buildInventoryAlertLabel(entry: PurchaseEntry) {
+  return [
+    entry.rawMaterialName,
+    entry.packagingType,
+    entry.level2,
+    entry.packagingBag,
+    entry.level3,
+    entry.bucketSize,
+  ]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function getInventoryAlertThreshold(entry: PurchaseEntry) {
+  const rawMaterialName = normalizeLabel(entry.rawMaterialName);
+  const packagingType = normalizeLabel(entry.packagingType);
+  const level2 = normalizeLabel(entry.level2);
+  const level3 = normalizeLabel(entry.level3);
+  const packagingBag = normalizeLabel(entry.packagingBag);
+  const unit = normalizeLabel(entry.unit);
+
+  if (rawMaterialName === "cement") {
+    if ((packagingType === "ppc" || packagingType === "opc") && level2 === "silo") {
+      return { threshold: 5, thresholdLabel: "5 mt" };
+    }
+
+    if (packagingType === "white cement" && level2 === "bag") {
+      return { threshold: 5, thresholdLabel: "5 mt" };
+    }
+  }
+
+  if (rawMaterialName === "sand") {
+    if (packagingType === "grey" && level2.includes("600 micron")) {
+      return { threshold: 5, thresholdLabel: "5 mt" };
+    }
+
+    if (packagingType === "grey" && level2.includes("1200 micron")) {
+      return { threshold: 5, thresholdLabel: "5 mt" };
+    }
+
+    if (packagingType === "white") {
+      return { threshold: 5, thresholdLabel: "5 mt" };
+    }
+  }
+
+  if (rawMaterialName === "chemical") {
+    return { threshold: 1000, thresholdLabel: "1000 kg" };
+  }
+
+  if (rawMaterialName === "packaging") {
+    if (unit === "bags") {
+      return { threshold: 200, thresholdLabel: "200 bags" };
+    }
+
+    if (level3 === "coupan") {
+      return { threshold: 200, thresholdLabel: "200 pcs" };
+    }
+
+    if (level2 === "tile grout" && level3.includes("pouch")) {
+      return { threshold: 100, thresholdLabel: "100 nos" };
+    }
+
+    if (level2 === "epoxy" && level3.includes("bucket")) {
+      return { threshold: 100, thresholdLabel: "100 bucket" };
+    }
+  }
+
+  if (packagingBag && packagingBag.includes("coupan")) {
+    return { threshold: 200, thresholdLabel: "200 pcs" };
+  }
+
+  return null;
+}
+
 function getTodayKey() {
   return new Date().toLocaleDateString("en-CA");
 }
@@ -247,13 +325,40 @@ export function DashboardPage() {
         .slice(0, 4)
         .map((entry) => ({
           id: entry.id,
-          meta: entry.challanNo || entry.id,
+          meta: entry.dispatchSite || entry.id,
           primary:
             [entry.productCategory, entry.productName, entry.productColor].filter(Boolean).join(" / ") ||
             "Dispatch entry",
-          secondary: [entry.totalBags, "bags", entry.vehicleNo].filter(Boolean).join(" • "),
+          secondary: [entry.totalBags, "bags"].filter(Boolean).join(" • "),
         })),
     [data.dispatchEntries],
+  );
+
+  const lowStockAlerts = useMemo(
+    () =>
+      sortedInventoryEntries
+        .filter((entry) => {
+          const thresholdRule = getInventoryAlertThreshold(entry);
+
+          if (!thresholdRule) {
+            return false;
+          }
+
+          return toNumber(entry.currentStock) < thresholdRule.threshold;
+        })
+        .map((entry) => {
+          const thresholdRule = getInventoryAlertThreshold(entry);
+          const currentStock = toNumber(entry.currentStock);
+
+          return {
+            id: entry.id,
+            label: buildInventoryAlertLabel(entry) || "Inventory item",
+            thresholdLabel: thresholdRule?.thresholdLabel || "",
+            unitLabel: entry.unit || "unit",
+            value: currentStock,
+          };
+        }),
+    [sortedInventoryEntries],
   );
 
   return (
@@ -312,6 +417,56 @@ export function DashboardPage() {
           value={isLoading ? "..." : formatCount(dashboardStats.todaysDispatchBags)}
         />
       </div>
+
+      <Card className="border-white/70 bg-white/85 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div>
+            <CardTitle>Inventory Alerts</CardTitle>
+            <CardDescription>
+              Low-stock inventory items based on operational minimum stock thresholds.
+            </CardDescription>
+          </div>
+          <Badge variant="outline">{isLoading ? "Checking..." : `${lowStockAlerts.length} alerts`}</Badge>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              Evaluating inventory stock alerts...
+            </div>
+          ) : lowStockAlerts.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No low-stock inventory alerts right now.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {lowStockAlerts.map((alert) => (
+                <Card className="overflow-hidden border-0 bg-white/90 shadow-[0_16px_34px_rgba(15,23,42,0.08)]" key={alert.id}>
+                  <CardContent className="relative p-5">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#b91c1c_0%,#ef4444_60%,#fca5a5_100%)]" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground" title={alert.label}>
+                          {alert.label}
+                        </p>
+                        <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Current Stock
+                        </p>
+                        <p className="mt-1 text-2xl font-bold text-destructive">
+                          {formatCount(alert.value)}
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Alert threshold: {alert.thresholdLabel}
+                        </p>
+                      </div>
+                      <Badge variant="destructive">{alert.unitLabel}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.15fr)]">
         <Card className="border-white/70 bg-white/85 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
