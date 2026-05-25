@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck, Warehouse } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, LogIn } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AUTH_STORAGE_KEY } from "@/lib/auth";
 import { loginUser } from "@/lib/googleSheetApi";
-
-const accessItems = ["Purchase register", "Production batches", "Product dispatch"];
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -56,7 +54,7 @@ export function LoginPage() {
 
       window.localStorage.setItem(AUTH_STORAGE_KEY, formData.userId);
       toast.success("Login successful.");
-      navigate("/purchase-entry", { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to login.");
     } finally {
@@ -66,50 +64,8 @@ export function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,_#f8fafc_0%,_#edf7f6_48%,_#fff7ed_100%)] px-4 py-6 text-foreground sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,430px)]">
-        <section className="hidden min-h-[640px] overflow-hidden rounded-lg border bg-card shadow-soft lg:block">
-          <div className="flex h-full flex-col justify-between p-8">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <Warehouse className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">StockPilot</p>
-                  <p className="text-xs text-muted-foreground">Inventory HQ</p>
-                </div>
-              </div>
-
-              <div className="mt-16 max-w-lg">
-                <p className="text-sm font-medium text-primary">Secure operator access</p>
-                <h1 className="mt-3 text-4xl font-bold leading-tight tracking-normal">
-                  Manage stock movement from purchase to dispatch.
-                </h1>
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {accessItems.map((item) => (
-                <div className="flex items-center justify-between rounded-md border bg-background px-4 py-3" key={item}>
-                  <span className="text-sm font-medium">{item}</span>
-                  <ShieldCheck className="size-4 text-primary" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
         <section className="mx-auto w-full max-w-[430px]">
-          <div className="mb-5 flex items-center gap-3 lg:hidden">
-            <div className="flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Warehouse className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">StockPilot</p>
-              <p className="text-xs text-muted-foreground">Inventory HQ</p>
-            </div>
-          </div>
-
           <Card>
             <CardHeader>
               <div className="mb-3 flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
