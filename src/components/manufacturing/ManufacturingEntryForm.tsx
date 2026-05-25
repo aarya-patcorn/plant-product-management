@@ -30,7 +30,8 @@ const groutColors = ["Black", "White", "Ivory", "Coffee Brown", "Gray", "Light G
 const tileAdhesiveWhiteProducts = ["K60", "K80", "K90", "Kamdhenu X"];
 const tileAdhesiveGrayProducts = ["K50", "K60", "K80", "K90", "Kamdhenu X"];
 const tileCleanerProducts = ["Crystal X 1L", "Shine X 1L", "Crystal X 5L", "Shine X 5L"];
-const RECENT_BATCHES_PAGE_SIZE = 3;
+const MOBILE_RECENT_BATCHES_PAGE_SIZE = 3;
+const DESKTOP_RECENT_BATCHES_PAGE_SIZE = 8;
 const OTHER_OPTION = "__other__";
 const manufacturingOtherFields = [
   "tphBatch",
@@ -167,6 +168,11 @@ export function ManufacturingEntryForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentBatches, setRecentBatches] = useState<ManufacturingEntry[]>([]);
   const [recentBatchesPage, setRecentBatchesPage] = useState(1);
+  const [recentBatchesPageSize, setRecentBatchesPageSize] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 1024
+      ? DESKTOP_RECENT_BATCHES_PAGE_SIZE
+      : MOBILE_RECENT_BATCHES_PAGE_SIZE,
+  );
 
   const [rawMaterials, setRawMaterials] = useState(initialRawMaterials);
 
@@ -284,7 +290,7 @@ export function ManufacturingEntryForm() {
             ? tileAdhesiveWhiteProducts
             : isTileAdhesiveProduct && selectedColor === "Gray"
               ? tileAdhesiveGrayProducts
-          : [];
+              : [];
   const bagSizeLabel =
     formData.productCategory === "Epoxy"
       ? "Bucket Size"
@@ -297,11 +303,24 @@ export function ManufacturingEntryForm() {
     isTileAdhesiveProduct ||
     selectedProductCategory === "Bondure" ||
     selectedProductCategory === "Grout";
-  const totalRecentBatchPages = Math.max(1, Math.ceil(recentBatches.length / RECENT_BATCHES_PAGE_SIZE));
+  const totalRecentBatchPages = Math.max(1, Math.ceil(recentBatches.length / recentBatchesPageSize));
   const visibleRecentBatches = recentBatches.slice(
-    (recentBatchesPage - 1) * RECENT_BATCHES_PAGE_SIZE,
-    recentBatchesPage * RECENT_BATCHES_PAGE_SIZE,
+    (recentBatchesPage - 1) * recentBatchesPageSize,
+    recentBatchesPage * recentBatchesPageSize,
   );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updatePageSize = () =>
+      setRecentBatchesPageSize(
+        mediaQuery.matches ? DESKTOP_RECENT_BATCHES_PAGE_SIZE : MOBILE_RECENT_BATCHES_PAGE_SIZE,
+      );
+
+    updatePageSize();
+    mediaQuery.addEventListener("change", updatePageSize);
+
+    return () => mediaQuery.removeEventListener("change", updatePageSize);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -483,10 +502,10 @@ export function ManufacturingEntryForm() {
       current.sticker === hiddenPackagingValue && current.sponge === hiddenPackagingValue
         ? current
         : {
-            ...current,
-            sticker: hiddenPackagingValue,
-            sponge: hiddenPackagingValue,
-          },
+          ...current,
+          sticker: hiddenPackagingValue,
+          sponge: hiddenPackagingValue,
+        },
     );
   }, [selectedProductCategory, formData.totalBagsProduced]);
 
@@ -885,10 +904,11 @@ export function ManufacturingEntryForm() {
 
                 <div
                   key={index}
-                  className="flex flex-col gap-4 rounded-md border p-4 md:flex-row md:items-end"
+                  className="flex flex-col gap-4 rounded-md border p-4 md:items-end xl:grid xl:grid-cols-4"
                 >
-                  <Field htmlFor={`rawMaterialName-${index}`} label="Raw Material">
+                  <Field className="min-w-0" htmlFor={`rawMaterialName-${index}`} label="Raw Material">
                     <Input
+                      className="w-full"
                       id={`rawMaterialName-${index}`}
                       placeholder="e.g. Cement"
                       readOnly={isRecipeLocked}
@@ -899,8 +919,9 @@ export function ManufacturingEntryForm() {
                     />
                   </Field>
 
-                  <Field htmlFor={`packagingType-${index}`} label="Packaging Type">
+                  <Field className="min-w-0" htmlFor={`packagingType-${index}`} label="Packaging Type">
                     <Input
+                      className="w-full"
                       id={`packagingType-${index}`}
                       placeholder="e.g. White, Premix"
                       readOnly={isRecipeLocked}
@@ -911,8 +932,9 @@ export function ManufacturingEntryForm() {
                     />
                   </Field>
 
-                  <Field htmlFor={`materialQuantity-${index}`} label="Material Quantity">
+                  <Field className="min-w-0" htmlFor={`materialQuantity-${index}`} label="Material Quantity">
                     <Input
+                      className="w-full"
                       id={`materialQuantity-${index}`}
                       placeholder="e.g. 1000 kg"
                       readOnly={isRecipeLocked}
@@ -923,8 +945,9 @@ export function ManufacturingEntryForm() {
                     />
                   </Field>
 
-                  <Field htmlFor={`materialUnit-${index}`} label="Unit">
+                  <Field className="min-w-0" htmlFor={`materialUnit-${index}`} label="Unit">
                     <Input
+                      className="w-full"
                       id={`materialUnit-${index}`}
                       placeholder="e.g. kg"
                       readOnly={isRecipeLocked}
@@ -938,7 +961,7 @@ export function ManufacturingEntryForm() {
               ))}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <Field htmlFor="bagSize" label={bagSizeLabel}>
                 <Select
                   id="bagSize"
@@ -1037,40 +1060,44 @@ export function ManufacturingEntryForm() {
                   onChange={(e) => updateNumberField("totalBagsProduced", e.target.value, { allowDecimal: true })}
                 />
               </Field>
+
+              <Field htmlFor="wastageQty" label="Wastage Qty">
+                <Input
+                  id="wastageQty"
+                  min="0"
+                  name="wastageQty"
+                  placeholder="Enter wastage quantity"
+                  step="0.01"
+                  type="number"
+                  value={formData.wastageQty}
+                  onChange={(e) => updateNumberField("wastageQty", e.target.value, { allowDecimal: true })}
+                />
+              </Field>
             </div>
 
-            <Field htmlFor="wastageQty" label="Wastage Qty">
-              <Input
-                id="wastageQty"
-                min="0"
-                name="wastageQty"
-                placeholder="Enter wastage quantity"
-                step="0.01"
-                type="number"
-                value={formData.wastageQty}
-                onChange={(e) => updateNumberField("wastageQty", e.target.value, { allowDecimal: true })}
-              />
-            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
 
-            <Field htmlFor="wastageReason" label="Wastage Reason">
-              <Textarea
-                id="wastageReason"
-                name="wastageReason"
-                placeholder="Add reason for wastage"
-                value={formData.wastageReason}
-                onChange={(e) => updateField("wastageReason", e.target.value)}
-              />
-            </Field>
+              <Field htmlFor="wastageReason" label="Wastage Reason">
+                <Textarea
+                  id="wastageReason"
+                  name="wastageReason"
+                  placeholder="Add reason for wastage"
+                  value={formData.wastageReason}
+                  onChange={(e) => updateField("wastageReason", e.target.value)}
+                />
+              </Field>
 
-            <Field htmlFor="remarks" label="Remarks">
-              <Textarea
-                id="remarks"
-                name="remarks"
-                placeholder="Add notes about batch quality, downtime, shortage, or rework"
-                value={formData.remarks}
-                onChange={(e) => updateField("remarks", e.target.value)}
-              />
-            </Field>
+              <Field htmlFor="remarks" label="Remarks">
+                <Textarea
+                  id="remarks"
+                  name="remarks"
+                  placeholder="Add notes about batch quality, downtime, shortage, or rework"
+                  value={formData.remarks}
+                  onChange={(e) => updateField("remarks", e.target.value)}
+                />
+              </Field>
+            </div>
+
 
             {formData.productCategory === "Epoxy" && (
               <>
@@ -1100,31 +1127,31 @@ export function ManufacturingEntryForm() {
         </CardContent>
       </Card>
 
-      <div className="space-y-5">
-        <Card>
+      <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
+        <Card className="xl:flex xl:h-full xl:flex-col">
           <CardHeader>
             <CardTitle>Recent batches</CardTitle>
             <CardDescription>Latest production entries for this register.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 xl:flex-1 xl:overflow-y-auto">
             {visibleRecentBatches.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 No production entries available yet.
               </div>
             ) : (
               visibleRecentBatches.map((batch) => (
-              <div className="rounded-md border p-3" key={batch.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium">{batch.finishedProductName || "Production entry"}</p>
-                  <span className="text-xs text-muted-foreground">{batch.batchNo || batch.id}</span>
+                <div className="rounded-md border p-3" key={batch.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">{batch.finishedProductName || "Production entry"}</p>
+                    <span className="text-xs text-muted-foreground">{batch.batchNo || batch.id}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {[batch.totalBagsProduced, "bags"].filter(Boolean).join(" ")} produced in {batch.productCategory || "-"}
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {[batch.totalBagsProduced, "bags"].filter(Boolean).join(" ")} produced in {batch.productCategory || "-"}
-                </p>
-              </div>
-            )))}
-            {recentBatches.length > RECENT_BATCHES_PAGE_SIZE ? (
-              <div className="flex items-center justify-between gap-2 border-t pt-3">
+              )))}
+            {recentBatches.length > recentBatchesPageSize ? (
+              <div className="flex items-center justify-between gap-2 border-t pt-2">
                 <Button
                   type="button"
                   variant="outline"

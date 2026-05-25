@@ -61,8 +61,8 @@ function SidebarNav({ onNavigate, onLogout }: { onNavigate?: () => void; onLogou
   const location = useLocation();
 
   return (
-    <div className="mt-4 flex h-full min-h-[420px] flex-col">
-      <nav className="space-y-1">
+    <div className="mt-4 flex h-full min-h-0 flex-col">
+      <nav className="flex h-full min-h-0 flex-col gap-1">
         {navItems.map(({ icon: Icon, label, path }) => {
           const active = location.pathname === path;
 
@@ -131,8 +131,8 @@ function AppShellLayout() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.12),_transparent_28rem),linear-gradient(180deg,_#f8fafc_0%,_#eef4f5_100%)]">
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-5 sm:px-6 lg:px-8">
-        <aside className="hidden w-64 shrink-0 rounded-lg border bg-card p-4 shadow-soft lg:block">
+      <div className="flex w-full items-start gap-6 px-4 py-5 sm:px-6 lg:px-8">
+        <aside className="hidden w-64 shrink-0 rounded-lg border bg-card p-4 shadow-soft lg:sticky lg:top-5 lg:flex lg:h-[calc(100vh-2.5rem)] lg:flex-col">
           <Brand />
           <SidebarNav onLogout={handleLogout} />
         </aside>

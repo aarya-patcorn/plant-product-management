@@ -335,36 +335,61 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {sortedInventoryEntries.slice(0, 3).map((entry) => (
-                  <div className="rounded-xl border bg-background/70 p-4" key={entry.id}>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{buildInventoryLabel(entry) || "Inventory item"}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {[entry.purchaseStock || entry.quantityPurchased, entry.unit].filter(Boolean).join(" ") || "Quantity not available"}
+                  <div className="min-w-0 rounded-xl border bg-background/70 p-4" key={entry.id}>
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate whitespace-nowrap text-sm font-semibold text-foreground"
+                          title={buildInventoryLabel(entry) || "Inventory item"}
+                        >
+                          {buildInventoryLabel(entry) || "Inventory item"}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">{entry.serialNo || "Serial N/A"}</Badge>
-                        <Badge variant="outline">{entry.invoiceNo || entry.id}</Badge>
+                      <div className="flex min-w-0 flex-wrap gap-2 sm:max-w-[45%] sm:justify-end">
+                        <Badge
+                          className="max-w-full truncate whitespace-nowrap"
+                          title={entry.purchaseStock || entry.quantityPurchased || "0"}
+                          variant="secondary"
+                        >
+                          {entry.purchaseStock || entry.quantityPurchased || "0"}
+                        </Badge>
+                        <Badge
+                          className="max-w-full truncate whitespace-nowrap"
+                          title={entry.unit || "Unit N/A"}
+                          variant="outline"
+                        >
+                          {entry.unit || "Unit N/A"}
+                        </Badge>
                       </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Purchase Stock</p>
-                        <p className="mt-1 text-sm font-medium text-foreground">
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground"
+                          title={entry.purchaseStock || entry.quantityPurchased || "0"}
+                        >
                           {entry.purchaseStock || entry.quantityPurchased || "0"}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Current Stock</p>
-                        <p className="mt-1 text-sm font-medium text-foreground">
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground"
+                          title={entry.currentStock || "0"}
+                        >
                           {entry.currentStock || "0"}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Used In Production</p>
-                        <p className="mt-1 text-sm font-medium text-foreground">{entry.usedInProduction || "0"}</p>
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground"
+                          title={entry.usedInProduction || "0"}
+                        >
+                          {entry.usedInProduction || "0"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -395,35 +420,59 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {sortedProductionLogs.slice(0, 3).map((entry) => (
-                  <div className="rounded-xl border bg-background/70 p-4" key={entry.id}>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
+                  <div className="min-w-0 rounded-xl border bg-background/70 p-4" key={entry.id}>
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate whitespace-nowrap text-sm font-semibold text-foreground"
+                          title={buildProductLabel(entry) || "Production log"}
+                        >
                           {buildProductLabel(entry) || "Production log"}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">{entry.token || "Token N/A"}</Badge>
-                        <Badge variant="outline">{entry.bagSize || "Bag size N/A"}</Badge>
+                      <div className="flex min-w-0 flex-wrap gap-2 sm:max-w-[45%] sm:justify-end">
+                        <Badge
+                          className="max-w-full truncate whitespace-nowrap"
+                          title={entry.token || "Token N/A"}
+                          variant="secondary"
+                        >
+                          {entry.token || "Token N/A"}
+                        </Badge>
+                        <Badge
+                          className="max-w-full truncate whitespace-nowrap"
+                          title={entry.bagSize || "Bag size N/A"}
+                          variant="outline"
+                        >
+                          {entry.bagSize || "Bag size N/A"}
+                        </Badge>
                       </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Current Stock</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-foreground"
+                          title={formatCount(toNumber(entry.currentQuantity))}
+                        >
                           {formatCount(toNumber(entry.currentQuantity))}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Available Bags</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-foreground"
+                          title={formatCount(toNumber(entry.currentQuantity))}
+                        >
                           {formatCount(toNumber(entry.currentQuantity))}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
+                      <div className="min-w-0 rounded-lg bg-muted/50 p-3">
                         <p className="text-xs font-medium uppercase text-muted-foreground">Dispatched Bags</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">
+                        <p
+                          className="mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-foreground"
+                          title={formatCount(toNumber(entry.shippedQuantity))}
+                        >
                           {formatCount(toNumber(entry.shippedQuantity))}
                         </p>
                       </div>

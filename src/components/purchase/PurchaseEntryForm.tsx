@@ -27,7 +27,8 @@ const epoxySandColorOptions = [
   "Savetrane",
   "Terracotta",
 ];
-const RECENT_PURCHASES_PAGE_SIZE = 3;
+const MOBILE_RECENT_PURCHASES_PAGE_SIZE = 3;
+const DESKTOP_RECENT_PURCHASES_PAGE_SIZE = 4;
 const OTHER_OPTION = "__other__";
 const purchaseOtherFields = [
   "rawMaterialName",
@@ -159,7 +160,7 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
       },
       "Tile Grout": {
         label: "Select Chemical",
-        options: ["Calcium Carbonate", "Yellow Pigment", "Black Pigment", "Red Pigment", "Blue Pigment", ],
+        options: ["Calcium Carbonate", "Yellow Pigment", "Black Pigment", "Red Pigment", "Blue Pigment",],
       },
     },
   },
@@ -323,11 +324,29 @@ export function PurchaseEntryForm() {
   const [sandBagQuantity, setSandBagQuantity] = useState("");
   const [recentPurchases, setRecentPurchases] = useState<PurchaseEntry[]>([]);
   const [recentPurchasesPage, setRecentPurchasesPage] = useState(1);
+  const [recentPurchasesPageSize, setRecentPurchasesPageSize] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 1024
+      ? DESKTOP_RECENT_PURCHASES_PAGE_SIZE
+      : MOBILE_RECENT_PURCHASES_PAGE_SIZE,
+  );
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updatePageSize = () =>
+      setRecentPurchasesPageSize(
+        mediaQuery.matches ? DESKTOP_RECENT_PURCHASES_PAGE_SIZE : MOBILE_RECENT_PURCHASES_PAGE_SIZE,
+      );
+
+    updatePageSize();
+    mediaQuery.addEventListener("change", updatePageSize);
+
+    return () => mediaQuery.removeEventListener("change", updatePageSize);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -349,13 +368,11 @@ export function PurchaseEntryForm() {
     };
   }, []);
 
-  const totalRecentPurchasePages = Math.max(1, Math.ceil(recentPurchases.length / RECENT_PURCHASES_PAGE_SIZE));
+  const totalRecentPurchasePages = Math.max(1, Math.ceil(recentPurchases.length / recentPurchasesPageSize));
   const visibleRecentPurchases = recentPurchases.slice(
-    (recentPurchasesPage - 1) * RECENT_PURCHASES_PAGE_SIZE,
-    recentPurchasesPage * RECENT_PURCHASES_PAGE_SIZE,
+    (recentPurchasesPage - 1) * recentPurchasesPageSize,
+    recentPurchasesPage * recentPurchasesPageSize,
   );
-
-  console.log(visibleRecentPurchases);
 
   useEffect(() => {
     if (recentPurchasesPage > totalRecentPurchasePages) {
@@ -452,7 +469,7 @@ export function PurchaseEntryForm() {
                 ? "bags"
                 : isPackagingFgFlow && (formData.level2 === "Tile Grout" || formData.level2 === "Epoxy")
                   ? "nos"
-            : "";
+                  : "";
 
   useEffect(() => {
     if (formData.rawMaterialName !== "Cement") {
@@ -535,9 +552,9 @@ export function PurchaseEntryForm() {
       current.unit === autoSelectedUnit
         ? current
         : {
-            ...current,
-            unit: autoSelectedUnit,
-          },
+          ...current,
+          unit: autoSelectedUnit,
+        },
     );
     setOtherSelections((current) => ({
       ...current,
@@ -835,7 +852,7 @@ export function PurchaseEntryForm() {
               </Field>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <Field htmlFor="raw-material-name" label="Raw Material Name">
                 <Select
                   id="raw-material-name"
@@ -935,7 +952,9 @@ export function PurchaseEntryForm() {
                 </Field>
               )}
               {renderOtherInput("level2", level2Config?.label ?? "Level 2", "Enter value")}
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-3">
               {shouldShowAutoBagQuantityField && (
                 <Field htmlFor="sand-bag-quantity" label="Bag Quantity">
                   <Input
@@ -1038,9 +1057,7 @@ export function PurchaseEntryForm() {
                 </Field>
               )}
               {renderOtherInput("colorOfSandEpoxy", "Color Of Sand (Epoxy)", "Enter sand color")}
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
               <Field htmlFor="quantity-purchased" label="Quantity Purchased">
                 <Input
                   id="quantity-purchased"
@@ -1071,7 +1088,9 @@ export function PurchaseEntryForm() {
                 </Select>
               </Field>
               {renderOtherInput("unit", "Unit", "Enter unit")}
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-3">
               <Field htmlFor="supplier-name" label="Supplier Name">
                 <Input
                   id="supplier-name"
@@ -1081,10 +1100,6 @@ export function PurchaseEntryForm() {
                   onChange={(e) => updateTextField("supplierName", e.target.value)}
                 />
               </Field>
-
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
               <Field htmlFor="invoice-no" label="Bill / Invoice No.">
                 <Input
                   id="invoice-no"
@@ -1214,13 +1229,13 @@ export function PurchaseEntryForm() {
         </CardContent>
       </Card>
 
-      <div className="space-y-5">
-        <Card>
+      <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
+        <Card className="xl:flex xl:h-full xl:flex-col">
           <CardHeader>
             <CardTitle>Recent purchases</CardTitle>
             <CardDescription>Latest saved purchase entries.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 xl:flex-1 xl:overflow-y-auto">
             {recentPurchases.length === 0 ? (
               <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                 Saved purchase entries will appear here.
@@ -1255,7 +1270,7 @@ export function PurchaseEntryForm() {
                 );
               })
             )}
-            {recentPurchases.length > RECENT_PURCHASES_PAGE_SIZE ? (
+            {recentPurchases.length > recentPurchasesPageSize ? (
               <div className="flex items-center justify-between gap-2 border-t pt-3">
                 <Button
                   type="button"

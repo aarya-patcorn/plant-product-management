@@ -16,7 +16,8 @@ import {
   type ProductionMaterialLog,
 } from "@/lib/googleSheetApi";
 
-const RECENT_DEPARTURES_PAGE_SIZE = 3;
+const MOBILE_RECENT_DEPARTURES_PAGE_SIZE = 3;
+const DESKTOP_RECENT_DEPARTURES_PAGE_SIZE = 8;
 const OTHER_OPTION = "__other__";
 const dispatchOtherFields = ["productCategory", "productName", "token", "productColor", "bagSize"] as const;
 type DispatchOtherField = (typeof dispatchOtherFields)[number];
@@ -89,6 +90,24 @@ export function ProductDepartureForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentDepartures, setRecentDepartures] = useState<DispatchEntry[]>([]);
   const [recentDeparturesPage, setRecentDeparturesPage] = useState(1);
+  const [recentDeparturesPageSize, setRecentDeparturesPageSize] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 1024
+      ? DESKTOP_RECENT_DEPARTURES_PAGE_SIZE
+      : MOBILE_RECENT_DEPARTURES_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updatePageSize = () =>
+      setRecentDeparturesPageSize(
+        mediaQuery.matches ? DESKTOP_RECENT_DEPARTURES_PAGE_SIZE : MOBILE_RECENT_DEPARTURES_PAGE_SIZE,
+      );
+
+    updatePageSize();
+    mediaQuery.addEventListener("change", updatePageSize);
+
+    return () => mediaQuery.removeEventListener("change", updatePageSize);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -216,10 +235,10 @@ export function ProductDepartureForm() {
       productionEntries,
     ],
   );
-  const totalRecentDeparturePages = Math.max(1, Math.ceil(recentDepartures.length / RECENT_DEPARTURES_PAGE_SIZE));
+  const totalRecentDeparturePages = Math.max(1, Math.ceil(recentDepartures.length / recentDeparturesPageSize));
   const visibleRecentDepartures = recentDepartures.slice(
-    (recentDeparturesPage - 1) * RECENT_DEPARTURES_PAGE_SIZE,
-    recentDeparturesPage * RECENT_DEPARTURES_PAGE_SIZE,
+    (recentDeparturesPage - 1) * recentDeparturesPageSize,
+    recentDeparturesPage * recentDeparturesPageSize,
   );
   const isManualProductSelection =
     otherSelections.productCategory ||
@@ -772,13 +791,13 @@ export function ProductDepartureForm() {
         </CardContent>
       </Card>
 
-      <div className="space-y-5">
-        <Card>
+      <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
+        <Card className="xl:flex xl:h-full xl:flex-col">
           <CardHeader>
             <CardTitle>Recent departures</CardTitle>
             <CardDescription>Latest dispatch entries for this register.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 xl:flex-1 xl:overflow-y-auto">
             {visibleRecentDepartures.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 No dispatch entries available yet.
@@ -795,8 +814,8 @@ export function ProductDepartureForm() {
                 </p>
               </div>
             )))}
-            {recentDepartures.length > RECENT_DEPARTURES_PAGE_SIZE ? (
-              <div className="flex items-center justify-between gap-2 border-t pt-3">
+            {recentDepartures.length > recentDeparturesPageSize ? (
+              <div className="flex items-center justify-between gap-2 border-t pt-6">
                 <Button
                   type="button"
                   variant="outline"
