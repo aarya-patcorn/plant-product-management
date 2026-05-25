@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { sanitizeNumberOnly, sanitizeTextOnly } from "@/lib/inputValidation";
 import {
   fetchDispatchEntries,
   fetchProductionMaterialLogs,
@@ -154,6 +155,7 @@ export function ProductDepartureForm() {
       ).filter(Boolean),
     [formData.productCategory, formData.productName, productionEntries],
   );
+  const isTileCleanerSelected = formData.productCategory === "Tile Cleaner";
 
   const tokenOptions = useMemo(
     () =>
@@ -163,13 +165,12 @@ export function ProductDepartureForm() {
             .filter(
               (entry) =>
                 entry.productCategory === formData.productCategory &&
-                entry.productName === formData.productName &&
-                (!formData.productColor || entry.productColor === formData.productColor),
+                entry.productName === formData.productName,
             )
             .map((entry) => entry.token),
         ),
       ).filter(Boolean),
-    [formData.productCategory, formData.productColor, formData.productName, productionEntries],
+    [formData.productCategory, formData.productName, productionEntries],
   );
 
   const bagSizes = useMemo(
@@ -181,12 +182,20 @@ export function ProductDepartureForm() {
               (entry) =>
                 entry.productCategory === formData.productCategory &&
                 entry.productName === formData.productName &&
-                entry.productColor === formData.productColor,
+                (isTileCleanerSelected || entry.productColor === formData.productColor) &&
+                (!formData.token || entry.token === formData.token),
             )
             .map((entry) => entry.bagSize),
         ),
       ).filter(Boolean),
-    [formData.productCategory, formData.productName, formData.productColor, productionEntries],
+    [
+      formData.productCategory,
+      formData.productName,
+      formData.productColor,
+      formData.token,
+      isTileCleanerSelected,
+      productionEntries,
+    ],
   );
 
   const selectedProductionEntry = useMemo(
@@ -195,10 +204,17 @@ export function ProductDepartureForm() {
         (entry) =>
           entry.productCategory === formData.productCategory &&
           entry.productName === formData.productName &&
-          entry.productColor === formData.productColor &&
+          (isTileCleanerSelected || entry.productColor === formData.productColor) &&
           entry.bagSize === formData.bagSize,
       ),
-    [formData.bagSize, formData.productCategory, formData.productColor, formData.productName, productionEntries],
+    [
+      formData.bagSize,
+      formData.productCategory,
+      formData.productColor,
+      formData.productName,
+      isTileCleanerSelected,
+      productionEntries,
+    ],
   );
   const totalRecentDeparturePages = Math.max(1, Math.ceil(recentDepartures.length / RECENT_DEPARTURES_PAGE_SIZE));
   const visibleRecentDepartures = recentDepartures.slice(
@@ -278,11 +294,33 @@ export function ProductDepartureForm() {
     });
   }, [tokenOptions]);
 
+  useEffect(() => {
+    if (!isTileCleanerSelected) {
+      return;
+    }
+
+    setOtherSelections((current) =>
+      current.productColor ? { ...current, productColor: false } : current,
+    );
+
+    setFormData((current) =>
+      current.productColor ? { ...current, productColor: "" } : current,
+    );
+  }, [isTileCleanerSelected]);
+
   const updateField = (name: keyof typeof formData, value: string) => {
     setFormData((current) => ({
       ...current,
       [name]: value,
     }));
+  };
+
+  const updateTextField = (name: keyof typeof formData, value: string) => {
+    updateField(name, sanitizeTextOnly(value));
+  };
+
+  const updateNumberField = (name: keyof typeof formData, value: string, options?: { allowDecimal?: boolean }) => {
+    updateField(name, sanitizeNumberOnly(value, options));
   };
 
   const getSelectValue = (field: DispatchOtherField, value: string) =>
@@ -321,7 +359,7 @@ export function ProductDepartureForm() {
           id={`${field}-other`}
           value={formData[field]}
           placeholder={placeholder}
-          onChange={(e) => updateField(field, e.target.value)}
+          onChange={(e) => updateTextField(field, e.target.value)}
         />
       </Field>
     ) : null;
@@ -383,7 +421,7 @@ export function ProductDepartureForm() {
       return "Token is required.";
     }
 
-    if (!formData.productColor) {
+    if (!isTileCleanerSelected && !formData.productColor) {
       return "Product color is required.";
     }
 
@@ -423,7 +461,10 @@ export function ProductDepartureForm() {
     setIsSubmitting(true);
 
     try {
-      await submitSheetEntry("dispatch", formData);
+      await submitSheetEntry("dispatch", {
+        ...formData,
+        productColor: isTileCleanerSelected ? "" : formData.productColor,
+      });
       setFormData(initialFormData);
       setOtherSelections(initialDispatchOtherState);
       toast.success("Dispatch entry saved successfully.");
@@ -498,7 +539,7 @@ export function ProductDepartureForm() {
                   name="challanName"
                   placeholder="Enter challan name"
                   value={formData.challanName}
-                  onChange={(e) => updateField("challanName", e.target.value)}
+                  onChange={(e) => updateTextField("challanName", e.target.value)}
                 />
               </Field>
             </div>
@@ -519,7 +560,7 @@ export function ProductDepartureForm() {
                   name="driverName"
                   placeholder="Enter driver name"
                   value={formData.driverName}
-                  onChange={(e) => updateField("driverName", e.target.value)}
+                  onChange={(e) => updateTextField("driverName", e.target.value)}
                 />
               </Field>
               <Field htmlFor="driver-contact" label="Driver Contact">
@@ -528,7 +569,7 @@ export function ProductDepartureForm() {
                   name="driverContact"
                   placeholder="Enter driver contact number"
                   value={formData.driverContact}
-                  onChange={(e) => updateField("driverContact", e.target.value)}
+                  onChange={(e) => updateNumberField("driverContact", e.target.value)}
                 />
               </Field>
               <Field htmlFor="dispatch-time" label="Dispatch Time">
@@ -549,7 +590,7 @@ export function ProductDepartureForm() {
                   name="dispatchSite"
                   placeholder="Enter dispatch site"
                   value={formData.dispatchSite}
-                  onChange={(e) => updateField("dispatchSite", e.target.value)}
+                  onChange={(e) => updateTextField("dispatchSite", e.target.value)}
                 />
               </Field>
               <Field htmlFor="today-vehicle-no" label="Today Vehicle No.">
@@ -560,7 +601,7 @@ export function ProductDepartureForm() {
                   placeholder="Daily vehicle count"
                   type="number"
                   value={formData.todayVehicleNo}
-                  onChange={(e) => updateField("todayVehicleNo", e.target.value)}
+                  onChange={(e) => updateNumberField("todayVehicleNo", e.target.value)}
                 />
               </Field>
             </div>
@@ -642,21 +683,22 @@ export function ProductDepartureForm() {
                 <Select
                   id="product-color"
                   name="productColor"
-                  value={getSelectValue("productColor", formData.productColor)}
+                  value={isTileCleanerSelected ? "" : getSelectValue("productColor", formData.productColor)}
                   onChange={(e) =>
-                    handleSelectChange("productColor", e.target.value, ["token", "bagSize"], { quantity: "" })
+                    handleSelectChange("productColor", e.target.value, ["bagSize"], { quantity: "" })
                   }
-                  disabled={!formData.productName}
+                  disabled={!formData.productName || isTileCleanerSelected}
                 >
                   <option value="" disabled>
-                    Select color
+                    {isTileCleanerSelected ? "Not applicable for Tile Cleaner" : "Select color"}
                   </option>
                   {getOptionsWithOther(productColors).map((option) => (
                     <option key={option} value={option === "Other" ? OTHER_OPTION : option}>{option}</option>
                   ))}
                 </Select>
               </Field>
-              {renderOtherInput("productColor", "Product Color", "Enter product color")}
+              {!isTileCleanerSelected &&
+                renderOtherInput("productColor", "Product Color", "Enter product color")}
 
               <Field htmlFor="bag-size" label="Bag Size">
                 <Select
@@ -664,7 +706,7 @@ export function ProductDepartureForm() {
                   name="bagSize"
                   value={getSelectValue("bagSize", formData.bagSize)}
                   onChange={(e) => handleSelectChange("bagSize", e.target.value)}
-                  disabled={!formData.productColor}
+                  disabled={!formData.productName || (!isTileCleanerSelected && !formData.productColor)}
                 >
                   <option value="" disabled>
                     Select bag size
@@ -688,7 +730,7 @@ export function ProductDepartureForm() {
                   type="number"
                   readOnly={!isManualProductSelection}
                   value={formData.quantity}
-                  onChange={(e) => updateField("quantity", e.target.value)}
+                  onChange={(e) => updateNumberField("quantity", e.target.value, { allowDecimal: true })}
                 />
               </Field>
               <Field htmlFor="total-bags" label="Departed Bags">
@@ -699,7 +741,7 @@ export function ProductDepartureForm() {
                   placeholder="0"
                   type="number"
                   value={formData.totalBags}
-                  onChange={(e) => updateField("totalBags", e.target.value)}
+                  onChange={(e) => updateNumberField("totalBags", e.target.value, { allowDecimal: true })}
                 />
               </Field>
             </div>

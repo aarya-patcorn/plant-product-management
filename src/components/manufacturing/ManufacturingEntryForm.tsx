@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchManufacturingEntries, submitSheetEntry, type ManufacturingEntry } from "@/lib/googleSheetApi";
+import { sanitizeNumberOnly, sanitizeTextOnly } from "@/lib/inputValidation";
 import {
   bondureRecipes,
   epoxyColors,
@@ -184,11 +185,27 @@ export function ManufacturingEntryForm() {
     setRawMaterials(updated);
   };
 
+  const updateRawMaterialTextField = (index: number, field: string, value: string) => {
+    updateRawMaterialField(index, field, sanitizeTextOnly(value));
+  };
+
+  const updateRawMaterialNumberField = (index: number, field: string, value: string) => {
+    updateRawMaterialField(index, field, sanitizeNumberOnly(value, { allowDecimal: true }));
+  };
+
   const updateField = (name: keyof typeof formData, value: string) => {
     setFormData((current) => ({
       ...current,
       [name]: value,
     }));
+  };
+
+  const updateTextField = (name: keyof typeof formData, value: string) => {
+    updateField(name, sanitizeTextOnly(value));
+  };
+
+  const updateNumberField = (name: keyof typeof formData, value: string, options?: { allowDecimal?: boolean }) => {
+    updateField(name, sanitizeNumberOnly(value, options));
   };
 
   const getSelectValue = (field: ManufacturingOtherField, value: string) =>
@@ -227,7 +244,7 @@ export function ManufacturingEntryForm() {
           id={`${field}-other`}
           value={formData[field]}
           placeholder={placeholder}
-          onChange={(e) => updateField(field, e.target.value)}
+          onChange={(e) => updateTextField(field, e.target.value)}
         />
       </Field>
     ) : null;
@@ -793,7 +810,7 @@ export function ManufacturingEntryForm() {
                     name="finishedProductName"
                     placeholder="Enter finished product"
                     value={formData.finishedProductName}
-                    onChange={(e) => updateField("finishedProductName", e.target.value)}
+                    onChange={(e) => updateTextField("finishedProductName", e.target.value)}
                   />
                 )}
               </Field>
@@ -851,7 +868,7 @@ export function ManufacturingEntryForm() {
                     name="color"
                     placeholder="e.g. Gray, White, etc."
                     value={selectedColor || ""}
-                    onChange={(e) => updateField("color", e.target.value)}
+                    onChange={(e) => updateTextField("color", e.target.value)}
                   />
                 )}
               </Field>
@@ -877,7 +894,7 @@ export function ManufacturingEntryForm() {
                       readOnly={isRecipeLocked}
                       value={item.rawMaterialName}
                       onChange={(e) =>
-                        updateRawMaterialField(index, "rawMaterialName", e.target.value)
+                        updateRawMaterialTextField(index, "rawMaterialName", e.target.value)
                       }
                     />
                   </Field>
@@ -889,7 +906,7 @@ export function ManufacturingEntryForm() {
                       readOnly={isRecipeLocked}
                       value={item.packagingType}
                       onChange={(e) =>
-                        updateRawMaterialField(index, "packagingType", e.target.value)
+                        updateRawMaterialTextField(index, "packagingType", e.target.value)
                       }
                     />
                   </Field>
@@ -901,7 +918,7 @@ export function ManufacturingEntryForm() {
                       readOnly={isRecipeLocked}
                       value={item.materialQuantity}
                       onChange={(e) =>
-                        updateRawMaterialField(index, "materialQuantity", e.target.value)
+                        updateRawMaterialNumberField(index, "materialQuantity", e.target.value)
                       }
                     />
                   </Field>
@@ -913,7 +930,7 @@ export function ManufacturingEntryForm() {
                       readOnly={isRecipeLocked}
                       value={item.materialUnit}
                       onChange={(e) =>
-                        updateRawMaterialField(index, "materialUnit", e.target.value)
+                        updateRawMaterialTextField(index, "materialUnit", e.target.value)
                       }
                     />
                   </Field>
@@ -1017,7 +1034,7 @@ export function ManufacturingEntryForm() {
                   placeholder="0"
                   type="number"
                   value={formData.totalBagsProduced}
-                  onChange={(e) => updateField("totalBagsProduced", e.target.value)}
+                  onChange={(e) => updateNumberField("totalBagsProduced", e.target.value, { allowDecimal: true })}
                 />
               </Field>
             </div>
@@ -1031,7 +1048,7 @@ export function ManufacturingEntryForm() {
                 step="0.01"
                 type="number"
                 value={formData.wastageQty}
-                onChange={(e) => updateField("wastageQty", e.target.value)}
+                onChange={(e) => updateNumberField("wastageQty", e.target.value, { allowDecimal: true })}
               />
             </Field>
 

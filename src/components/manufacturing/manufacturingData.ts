@@ -261,7 +261,7 @@ export const tileCleanerRecipes: Record<string, RawMaterialRecipeItem[]> = {
 };
 
 export const bondureRecipes: RawMaterialRecipeItem[] = [
-  { rawMaterialName: "Cement", packagingType: "PPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "400", materialUnit: "kg" },
+  { rawMaterialName: "Cement", packagingType: "PPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "400", materialUnit: "kg" },
   { rawMaterialName: "Sand", packagingType: "Grey", level2: "Big (1200 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "600", materialUnit: "kg" },
   { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "K50", level3: "", colorOfSandEpoxy: "", materialQuantity: "4", materialUnit: "kg" },
 ];
@@ -291,27 +291,27 @@ export const tileAdhesiveRecipes: Record<string, Record<string, RawMaterialRecip
   },
   Grey: {
     "K90": [
-      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "K90", level3: "", colorOfSandEpoxy: "", materialQuantity: "18", materialUnit: "kg" },
     ],
     "K80": [
-      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "K80", level3: "", colorOfSandEpoxy: "", materialQuantity: "9", materialUnit: "kg" },
     ],
     "K60": [
-      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "550", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "K60", level3: "", colorOfSandEpoxy: "", materialQuantity: "9", materialUnit: "kg" },
     ],
     "K50": [
-      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "400", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "PPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "400", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "600", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "K50", level3: "", colorOfSandEpoxy: "", materialQuantity: "4", materialUnit: "kg" },
     ],
     "Kamdhenu X": [
-      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Bulker", level3: "", colorOfSandEpoxy: "", materialQuantity: "500", materialUnit: "kg" },
+      { rawMaterialName: "Cement", packagingType: "OPC", level2: "Silo", level3: "", colorOfSandEpoxy: "", materialQuantity: "500", materialUnit: "kg" },
       { rawMaterialName: "Sand", packagingType: "Grey", level2: "Small (600 micron)", level3: "", colorOfSandEpoxy: "", materialQuantity: "450", materialUnit: "kg" },
       { rawMaterialName: "Chemical", packagingType: "Tile Adhesive", level2: "KX", level3: "", colorOfSandEpoxy: "", materialQuantity: "36", materialUnit: "kg" },
     ],

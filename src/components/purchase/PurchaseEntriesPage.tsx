@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  deletePurchaseEntry,
   fetchPurchaseEntries,
   type PurchaseEntry,
   updatePurchaseEntry,
@@ -80,7 +79,6 @@ export function PurchaseEntriesPage() {
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -133,28 +131,6 @@ export function PurchaseEntriesPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleDelete = async (entryId: string) => {
-    setDeletingEntryId(entryId);
-
-    try {
-      await deletePurchaseEntry(entryId);
-      setEntries((current) => current.filter((entry) => entry.id !== entryId));
-      setEditingEntry((current) => (current?.id === entryId ? null : current));
-      toast.success("Purchase entry deleted successfully.");
-
-      void fetchPurchaseEntries()
-        .then((purchaseEntries) => {
-          setEntries(purchaseEntries);
-          setLoadError("");
-        })
-        .catch(() => {});
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to delete purchase entry.");
-    } finally {
-      setDeletingEntryId(null);
-    }
-  };
-
   const startEditing = (entry: PurchaseEntry) => {
     setEditingEntry({
       ...entry,
@@ -196,7 +172,7 @@ export function PurchaseEntriesPage() {
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle>All purchase entries</CardTitle>
-            <CardDescription>Review, update, and delete saved purchase records.</CardDescription>
+            <CardDescription>Review and update saved purchase records.</CardDescription>
           </div>
           <Button asChild variant="outline">
             <Link to="/purchase-entry">
@@ -432,15 +408,6 @@ export function PurchaseEntriesPage() {
                           >
                             <Pencil />
                           </Button>
-                          <Button
-                            disabled={deletingEntryId === entry.id}
-                            size="icon"
-                            type="button"
-                            variant="destructive"
-                            onClick={() => handleDelete(entry.id)}
-                          >
-                            <Trash2 />
-                          </Button>
                         </div>
                       </div>
 
@@ -484,21 +451,21 @@ export function PurchaseEntriesPage() {
                 ))}
               </div>
 
-              <div className="hidden lg:block">
-                <Table>
+              <div className="hidden overflow-x-auto lg:block">
+                <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Unload By</TableHead>
-                      <TableHead>Attachment</TableHead>
-                      <TableHead>Remarks</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="ID">ID</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Date">Date</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Time">Time</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Material">Material</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Quantity">Quantity</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Supplier">Supplier</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Invoice">Invoice</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Unload By">Unload By</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Attachment">Attachment</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Remarks">Remarks</TableHead>
+                      <TableHead className="w-[120px] whitespace-nowrap text-center" title="Actions">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -534,8 +501,8 @@ export function PurchaseEntriesPage() {
                         <TableCell className="max-w-[200px] truncate whitespace-nowrap" title={entry.remarks || "-"}>
                           {entry.remarks || "-"}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-2">
                             <Button
                               size="icon"
                               type="button"
@@ -543,15 +510,6 @@ export function PurchaseEntriesPage() {
                               onClick={() => startEditing(entry)}
                             >
                               <Pencil />
-                            </Button>
-                            <Button
-                              disabled={deletingEntryId === entry.id}
-                              size="icon"
-                              type="button"
-                              variant="destructive"
-                              onClick={() => handleDelete(entry.id)}
-                            >
-                              <Trash2 />
                             </Button>
                           </div>
                         </TableCell>

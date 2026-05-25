@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  deleteDispatchEntry,
   fetchDispatchEntries,
   type DispatchEntry,
   updateDispatchEntry,
@@ -75,7 +74,6 @@ export function DispatchEntriesPage() {
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,28 +123,6 @@ export function DispatchEntriesPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleDelete = async (entryId: string) => {
-    setDeletingEntryId(entryId);
-
-    try {
-      await deleteDispatchEntry(entryId);
-      setEntries((current) => current.filter((entry) => entry.id !== entryId));
-      setEditingEntry((current) => (current?.id === entryId ? null : current));
-      toast.success("Dispatch entry deleted successfully.");
-
-      void fetchDispatchEntries()
-        .then((dispatchEntries) => {
-          setEntries(dispatchEntries);
-          setLoadError("");
-        })
-        .catch(() => {});
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to delete dispatch entry.");
-    } finally {
-      setDeletingEntryId(null);
-    }
-  };
-
   const startEditing = (entry: DispatchEntry) => {
     setEditingEntry({
       ...entry,
@@ -163,7 +139,10 @@ export function DispatchEntriesPage() {
     setIsUpdating(true);
 
     try {
-      await updateDispatchEntry(editingEntry);
+      await updateDispatchEntry({
+        ...editingEntry,
+        productColor: editingEntry.productCategory === "Tile Cleaner" ? "" : editingEntry.productColor,
+      });
       setEntries((current) =>
         current.map((entry) => (entry.id === editingEntry.id ? editingEntry : entry)),
       );
@@ -273,6 +252,10 @@ export function DispatchEntriesPage() {
               <Field htmlFor="edit-productColor" label="Product Color">
                 <Input
                   id="edit-productColor"
+                  disabled={editingEntry.productCategory === "Tile Cleaner"}
+                  placeholder={
+                    editingEntry.productCategory === "Tile Cleaner" ? "Not applicable for Tile Cleaner" : undefined
+                  }
                   value={editingEntry.productColor}
                   onChange={(event) =>
                     setEditingEntry((current) => current ? { ...current, productColor: event.target.value } : current)
@@ -447,15 +430,6 @@ export function DispatchEntriesPage() {
                           >
                             <Pencil />
                           </Button>
-                          <Button
-                            disabled={deletingEntryId === entry.id}
-                            size="icon"
-                            type="button"
-                            variant="destructive"
-                            onClick={() => handleDelete(entry.id)}
-                          >
-                            <Trash2 />
-                          </Button>
                         </div>
                       </div>
 
@@ -501,42 +475,38 @@ export function DispatchEntriesPage() {
                 ))}
               </div>
 
-              <div className="hidden lg:block">
-                <Table>
+              <div className="hidden overflow-x-auto lg:block">
+                <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Challan</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Token</TableHead>
-                      <TableHead>Bag Size</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Departed Bags</TableHead>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Dispatch Site</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Date">Date</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Time">Time</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Challan">Challan</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Product">Product</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Token">Token</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Bag Size">Bag Size</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Departed Bags">Departed Bags</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Vehicle">Vehicle</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Driver">Driver</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Dispatch Site">Dispatch Site</TableHead>
+                      <TableHead className="w-[120px] whitespace-nowrap text-center" title="Actions">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
-                        <TableCell className="max-w-[140px] truncate whitespace-nowrap text-xs text-muted-foreground" title={entry.id}>{entry.id}</TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.date || "-"}>{entry.date || "-"}</TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.time || "-"}>{entry.time || "-"}</TableCell>
                         <TableCell className="max-w-[160px] truncate whitespace-nowrap" title={entry.challanNo || entry.challanName || "-"}>{entry.challanNo || entry.challanName || "-"}</TableCell>
                         <TableCell className="min-w-[220px] max-w-[220px] truncate whitespace-nowrap" title={buildDispatchLabel(entry) || "-"}>{buildDispatchLabel(entry) || "-"}</TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.token || "-"}>{entry.token || "-"}</TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.bagSize || "-"}>{entry.bagSize || "-"}</TableCell>
-                        <TableCell className="whitespace-nowrap" title={entry.quantity || "-"}>{entry.quantity || "-"}</TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.totalBags || "-"}>{entry.totalBags || "-"}</TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.vehicleNo || "-"}>{entry.vehicleNo || "-"}</TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.driverName || "-"}>{entry.driverName || "-"}</TableCell>
                         <TableCell className="max-w-[160px] truncate whitespace-nowrap" title={entry.dispatchSite || "-"}>{entry.dispatchSite || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-2">
                             <Button
                               size="icon"
                               type="button"
@@ -544,15 +514,6 @@ export function DispatchEntriesPage() {
                               onClick={() => startEditing(entry)}
                             >
                               <Pencil />
-                            </Button>
-                            <Button
-                              disabled={deletingEntryId === entry.id}
-                              size="icon"
-                              type="button"
-                              variant="destructive"
-                              onClick={() => handleDelete(entry.id)}
-                            >
-                              <Trash2 />
                             </Button>
                           </div>
                         </TableCell>

@@ -378,7 +378,7 @@ export function DashboardPage() {
           <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
               <CardTitle>Production Material Logs</CardTitle>
-              <CardDescription>Available bags, current stock, and dispatched quantity for finished products.</CardDescription>
+              <CardDescription>Top 3 recent finished-product logs with stock and dispatch details.</CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
               <Link to="/production-material-logs">
@@ -394,15 +394,12 @@ export function DashboardPage() {
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No production logs found yet.</div>
             ) : (
               <div className="space-y-3">
-                {sortedProductionLogs.map((entry) => (
+                {sortedProductionLogs.slice(0, 3).map((entry) => (
                   <div className="rounded-xl border bg-background/70 p-4" key={entry.id}>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-foreground">
                           {buildProductLabel(entry) || "Production log"}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {entry.batchNo || entry.productionDate || entry.id}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">

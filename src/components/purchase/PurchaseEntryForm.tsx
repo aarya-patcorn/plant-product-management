@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchPurchaseEntries, submitSheetEntry, type PurchaseEntry } from "@/lib/googleSheetApi";
+import { sanitizeNumberOnly, sanitizeTextOnly } from "@/lib/inputValidation";
 
-const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "ml", "others"];
+const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "ml", "nos", "others"];
 const materialOptions = ["Cement", "Sand", "Chemical", "Packaging", "Spares", "Other"];
 const epoxySandColorOptions = [
   "White",
@@ -60,6 +61,11 @@ const initialFormData = {
   remarks: "",
 };
 
+function formatMetricTonnesFromKilograms(kilograms: number) {
+  const metricTonnes = kilograms / 1000;
+  return metricTonnes.toFixed(3).replace(/\.?0+$/, "");
+}
+
 type MaterialConfig = {
   label: string;
   options: string[];
@@ -75,11 +81,11 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
     children: {
       PPC: {
         label: "Packaging Type",
-        options: ["Bulker"],
+        options: ["Silo"],
       },
       OPC: {
         label: "Packaging Type",
-        options: ["Bulker"],
+        options: ["Silo"],
       },
       "White Cement": {
         label: "Packaging Type",
@@ -217,7 +223,7 @@ const rawMaterialConfig: Record<RawMaterialName, MaterialConfig> = {
 
           "Tile Grout": {
             label: "Packaging",
-            options: ["Pouch 1KG", "Carton 1x25"],
+            options: ["Pouch 1KG"],
           },
 
           Epoxy: {
@@ -314,6 +320,7 @@ export function PurchaseEntryForm() {
   const [formData, setFormData] = useState(initialFormData)
   const [otherSelections, setOtherSelections] = useState(initialPurchaseOtherState);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sandBagQuantity, setSandBagQuantity] = useState("");
   const [recentPurchases, setRecentPurchases] = useState<PurchaseEntry[]>([]);
   const [recentPurchasesPage, setRecentPurchasesPage] = useState(1);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
@@ -371,13 +378,25 @@ export function PurchaseEntryForm() {
     formData.packagingType === "FG" &&
     (formData.level2 === "Tile Adhesive" || formData.level2 === "Bondure");
 
-  const packagingBagLookupKey = shouldShowPackagingBagField ? formData.packagingBag : formData.level2;
+  const selectedLevel2Config = useMemo(() => {
+    return level2Config && "children" in level2Config
+      ? level2Config.children?.[formData.level2 as keyof typeof level2Config.children]
+      : undefined;
+  }, [level2Config, formData.level2]);
 
   const level3Config = useMemo(() => {
-    return level2Config && "children" in level2Config
-      ? level2Config.children?.[packagingBagLookupKey as keyof typeof level2Config.children]
-      : undefined;
-  }, [level2Config, packagingBagLookupKey])
+    if (!selectedLevel2Config) {
+      return undefined;
+    }
+
+    if (shouldShowPackagingBagField) {
+      return "children" in selectedLevel2Config
+        ? selectedLevel2Config.children?.[formData.packagingBag as keyof typeof selectedLevel2Config.children]
+        : undefined;
+    }
+
+    return selectedLevel2Config;
+  }, [formData.packagingBag, selectedLevel2Config, shouldShowPackagingBagField]);
 
   const shouldShowEpoxySandColorField =
     formData.rawMaterialName === "Packaging" &&
@@ -392,6 +411,46 @@ export function PurchaseEntryForm() {
   const packagingBagOptions =
     formData.level2 === "Bondure" ? ["Bondure"] : ["K50", "K60", "K70", "K80", "K90", "Kamdhenu X"];
   const bucketSizeOptions = ["1L", "5L"];
+  const shouldShowAutoBagQuantityField =
+    (formData.rawMaterialName === "Sand" &&
+      (formData.packagingType === "White" || (formData.packagingType === "Grey" && Boolean(formData.level2)))) ||
+    (formData.rawMaterialName === "Cement" &&
+      formData.packagingType === "White Cement" &&
+      formData.level2 === "Bag");
+  const autoBagWeightInKg =
+    formData.rawMaterialName === "Sand"
+      ? formData.packagingType === "Grey"
+        ? 40
+        : formData.packagingType === "White"
+          ? 50
+          : 0
+      : formData.rawMaterialName === "Cement" && formData.packagingType === "White Cement"
+        ? 40
+        : 0;
+  const isPackagingTileAdhesiveFlow =
+    formData.rawMaterialName === "Packaging" &&
+    formData.packagingType === "FG" &&
+    formData.level2 === "Tile Adhesive" &&
+    Boolean(formData.packagingBag);
+  const isPackagingFgFlow =
+    formData.rawMaterialName === "Packaging" &&
+    formData.packagingType === "FG";
+  const autoSelectedUnit =
+    shouldShowAutoBagQuantityField || formData.rawMaterialName === "Cement"
+      ? "mt"
+      : formData.rawMaterialName === "Chemical"
+        ? "kg"
+        : isPackagingTileAdhesiveFlow && (formData.level3 === "20kg" || formData.level3 === "50kg")
+          ? "bags"
+          : isPackagingTileAdhesiveFlow && formData.level3 === "Coupan"
+            ? "pcs"
+            : isPackagingFgFlow && formData.level2 === "Tile Cleaner"
+              ? "pcs"
+              : isPackagingFgFlow && formData.level2 === "Bondure"
+                ? "bags"
+                : isPackagingFgFlow && (formData.level2 === "Tile Grout" || formData.level2 === "Epoxy")
+                  ? "nos"
+            : "";
 
   useEffect(() => {
     if (formData.rawMaterialName !== "Cement") {
@@ -400,11 +459,11 @@ export function PurchaseEntryForm() {
 
     if (
       (formData.packagingType === "PPC" || formData.packagingType === "OPC") &&
-      formData.level2 !== "Bulker"
+      formData.level2 !== "Silo"
     ) {
       setFormData((current) => ({
         ...current,
-        level2: "Bulker",
+        level2: "Silo",
         level3: "",
         colorOfSandEpoxy: "",
         bucketSize: "",
@@ -465,11 +524,108 @@ export function PurchaseEntryForm() {
     }
   }, [formData.level2, shouldShowPackagingBagField, formData.packagingBag, formData.level3]);
 
+  useEffect(() => {
+    if (!autoSelectedUnit) {
+      return;
+    }
+
+    setFormData((current) =>
+      current.unit === autoSelectedUnit
+        ? current
+        : {
+            ...current,
+            unit: autoSelectedUnit,
+          },
+    );
+    setOtherSelections((current) => ({
+      ...current,
+      unit: false,
+    }));
+  }, [autoSelectedUnit]);
+
+  useEffect(() => {
+    if (!shouldShowAutoBagQuantityField || !autoBagWeightInKg) {
+      setSandBagQuantity((current) => (current ? "" : current));
+      setFormData((current) => {
+        const isAutoBagMaterial =
+          current.rawMaterialName === "Sand" ||
+          (current.rawMaterialName === "Cement" && current.packagingType === "White Cement");
+
+        if (!isAutoBagMaterial) {
+          return current;
+        }
+
+        const nextUnit = current.rawMaterialName === "Cement" ? "mt" : "";
+
+        if (!current.quantityPurchased && current.unit === nextUnit) {
+          return current;
+        }
+
+        return {
+          ...current,
+          quantityPurchased: "",
+          unit: nextUnit,
+        };
+      });
+      setOtherSelections((current) => ({
+        ...current,
+        unit: false,
+      }));
+      return;
+    }
+
+    if (!sandBagQuantity) {
+      setFormData((current) => {
+        if (!current.quantityPurchased && current.unit === "mt") {
+          return current;
+        }
+
+        return {
+          ...current,
+          quantityPurchased: "",
+          unit: "mt",
+        };
+      });
+      setOtherSelections((current) => ({
+        ...current,
+        unit: false,
+      }));
+      return;
+    }
+
+    const totalKilograms = Number(sandBagQuantity) * autoBagWeightInKg;
+    const quantityPurchased = formatMetricTonnesFromKilograms(totalKilograms);
+
+    setFormData((current) => {
+      if (current.quantityPurchased === quantityPurchased && current.unit === "mt") {
+        return current;
+      }
+
+      return {
+        ...current,
+        quantityPurchased,
+        unit: "mt",
+      };
+    });
+    setOtherSelections((current) => ({
+      ...current,
+      unit: false,
+    }));
+  }, [autoBagWeightInKg, sandBagQuantity, shouldShowAutoBagQuantityField]);
+
   const updateField = (name: keyof typeof formData, value: string) => {
     setFormData((current) => ({
       ...current,
       [name]: value,
     }));
+  };
+
+  const updateTextField = (name: keyof typeof formData, value: string) => {
+    updateField(name, sanitizeTextOnly(value));
+  };
+
+  const updateNumberField = (name: keyof typeof formData, value: string, options?: { allowDecimal?: boolean }) => {
+    updateField(name, sanitizeNumberOnly(value, options));
   };
 
   const getSelectValue = (field: PurchaseOtherField, value: string) =>
@@ -508,7 +664,7 @@ export function PurchaseEntryForm() {
           id={`${field}-other`}
           value={formData[field]}
           placeholder={placeholder}
-          onChange={(e) => updateField(field, e.target.value)}
+          onChange={(e) => updateTextField(field, e.target.value)}
         />
       </Field>
     ) : null;
@@ -548,6 +704,10 @@ export function PurchaseEntryForm() {
 
     if (shouldShowEpoxySandColorField && !formData.colorOfSandEpoxy) {
       return "Color of sand (epoxy) is required.";
+    }
+
+    if (shouldShowAutoBagQuantityField && !isPositiveNumber(sandBagQuantity)) {
+      return "Bag quantity must be greater than 0.";
     }
 
     if (!isPositiveNumber(formData.quantityPurchased)) {
@@ -609,6 +769,7 @@ export function PurchaseEntryForm() {
       setRecentPurchases(latestEntries);
       setRecentPurchasesPage(1);
       setFormData(initialFormData);
+      setSandBagQuantity("");
       setOtherSelections(initialPurchaseOtherState);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -643,6 +804,7 @@ export function PurchaseEntryForm() {
             className="grid gap-5"
             onReset={() => {
               setFormData(initialFormData);
+              setSandBagQuantity("");
               setOtherSelections(initialPurchaseOtherState);
               setSelectedFile(null);
               setSubmitStatus("idle");
@@ -772,6 +934,20 @@ export function PurchaseEntryForm() {
               )}
               {renderOtherInput("level2", level2Config?.label ?? "Level 2", "Enter value")}
 
+              {shouldShowAutoBagQuantityField && (
+                <Field htmlFor="sand-bag-quantity" label="Bag Quantity">
+                  <Input
+                    id="sand-bag-quantity"
+                    min="0"
+                    name="sandBagQuantity"
+                    placeholder="Enter bag quantity"
+                    type="number"
+                    value={sandBagQuantity}
+                    onChange={(e) => setSandBagQuantity(sanitizeNumberOnly(e.target.value))}
+                  />
+                </Field>
+              )}
+
               {/* LEVEL 3 */}
               {shouldShowPackagingBagField && (
                 <Field htmlFor="packagingBag" label="Packaging Bag">
@@ -870,8 +1046,9 @@ export function PurchaseEntryForm() {
                   name="quantityPurchased"
                   placeholder="Enter quantity"
                   type="number"
+                  readOnly={shouldShowAutoBagQuantityField}
                   value={formData.quantityPurchased}
-                  onChange={(e) => updateField("quantityPurchased", e.target.value)}
+                  onChange={(e) => updateNumberField("quantityPurchased", e.target.value, { allowDecimal: true })}
                 />
               </Field>
 
@@ -880,6 +1057,7 @@ export function PurchaseEntryForm() {
                   id="unit"
                   name="unit"
                   value={getSelectValue("unit", formData.unit)}
+                  disabled={Boolean(autoSelectedUnit)}
                   onChange={(e) => handleSelectChange("unit", e.target.value)}
                 >
                   <option value="" disabled>
@@ -898,7 +1076,7 @@ export function PurchaseEntryForm() {
                   name="supplierName"
                   placeholder="Enter supplier name"
                   value={formData.supplierName}
-                  onChange={(e) => updateField("supplierName", e.target.value)}
+                  onChange={(e) => updateTextField("supplierName", e.target.value)}
                 />
               </Field>
 
@@ -916,9 +1094,9 @@ export function PurchaseEntryForm() {
               </Field>
               <Field htmlFor="unload-by" label="Unload By">
 
-                {/* Cement + Bulker */}
+                {/* Cement + Silo */}
                 {formData.rawMaterialName === "Cement" &&
-                  formData.level2 === "Bulker" ? (
+                  formData.level2 === "Silo" ? (
 
                   <select
                     id="unload-by"
@@ -980,7 +1158,7 @@ export function PurchaseEntryForm() {
                     name="unloadBy"
                     placeholder="Person or team name"
                     value={formData.unloadBy}
-                    onChange={(e) => updateField("unloadBy", e.target.value)}
+                    onChange={(e) => updateTextField("unloadBy", e.target.value)}
                   />
                 )}
               </Field>
@@ -1009,7 +1187,7 @@ export function PurchaseEntryForm() {
                 name="remarks"
                 placeholder="Add notes about quality, shortage, damage, or payment status"
                 value={formData.remarks}
-                onChange={(e) => updateField("remarks", e.target.value)}
+                onChange={(e) => updateTextField("remarks", e.target.value)}
               />
             </Field>
 

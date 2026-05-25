@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  deleteManufacturingEntry,
   fetchManufacturingEntries,
   type ManufacturingEntry,
   updateManufacturingEntry,
@@ -54,7 +53,6 @@ export function ManufacturingEntriesPage() {
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,28 +104,6 @@ export function ManufacturingEntriesPage() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
-
-  const handleDelete = async (entryId: string) => {
-    setDeletingEntryId(entryId);
-
-    try {
-      await deleteManufacturingEntry(entryId);
-      setEntries((current) => current.filter((entry) => entry.id !== entryId));
-      setEditingEntry((current) => (current?.id === entryId ? null : current));
-      toast.success("Production entry deleted successfully.");
-
-      void fetchManufacturingEntries()
-        .then((manufacturingEntries) => {
-          setEntries(manufacturingEntries);
-          setLoadError("");
-        })
-        .catch(() => {});
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to delete production entry.");
-    } finally {
-      setDeletingEntryId(null);
-    }
-  };
 
   const handleUpdate = async () => {
     if (!editingEntry) {
@@ -381,15 +357,6 @@ export function ManufacturingEntriesPage() {
                           >
                             <Pencil />
                           </Button>
-                          <Button
-                            disabled={deletingEntryId === entry.id}
-                            size="icon"
-                            type="button"
-                            variant="destructive"
-                            onClick={() => handleDelete(entry.id)}
-                          >
-                            <Trash2 />
-                          </Button>
                         </div>
                       </div>
 
@@ -436,30 +403,28 @@ export function ManufacturingEntriesPage() {
                 ))}
               </div>
 
-              <div className="hidden lg:block">
-                <Table>
+              <div className="hidden overflow-x-auto lg:block">
+                <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Batch No</TableHead>
-                      <TableHead>Batch Type</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Token</TableHead>
-                      <TableHead>Bag Size</TableHead>
-                      <TableHead>Total Bags</TableHead>
-                      <TableHead>Wastage</TableHead>
-                      <TableHead>Raw Materials</TableHead>
-                      <TableHead>Remarks</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Date">Date</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Batch No">Batch No</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Batch Type">Batch Type</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Category">Category</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Product">Product</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Color">Color</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Token">Token</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Bag Size">Bag Size</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Total Bags">Total Bags</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Wastage">Wastage</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Raw Materials">Raw Materials</TableHead>
+                      <TableHead className="whitespace-nowrap text-center" title="Remarks">Remarks</TableHead>
+                      <TableHead className="w-[120px] whitespace-nowrap text-center" title="Actions">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
-                        <TableCell className="max-w-[140px] truncate whitespace-nowrap text-xs text-muted-foreground" title={entry.id}>{entry.id}</TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.productionDate || "-"}>{entry.productionDate || "-"}</TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.batchNo || "-"}>{entry.batchNo || "-"}</TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.tphBatch || "-"}>{entry.tphBatch || "-"}</TableCell>
@@ -474,8 +439,8 @@ export function ManufacturingEntriesPage() {
                           {[entry.rawMaterialNames, entry.rawMaterialQty, entry.rawMaterialUnits].filter(Boolean).join(" / ") || "-"}
                         </TableCell>
                         <TableCell className="max-w-[220px] truncate whitespace-nowrap" title={entry.remarks || "-"}>{entry.remarks || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-2">
                             <Button
                               size="icon"
                               type="button"
@@ -483,15 +448,6 @@ export function ManufacturingEntriesPage() {
                               onClick={() => setEditingEntry(entry)}
                             >
                               <Pencil />
-                            </Button>
-                            <Button
-                              disabled={deletingEntryId === entry.id}
-                              size="icon"
-                              type="button"
-                              variant="destructive"
-                              onClick={() => handleDelete(entry.id)}
-                            >
-                              <Trash2 />
                             </Button>
                           </div>
                         </TableCell>

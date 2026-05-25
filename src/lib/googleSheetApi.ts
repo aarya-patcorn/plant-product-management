@@ -1,5 +1,5 @@
 const GOOGLE_SHEET_API_URL =
-  "https://script.google.com/macros/s/AKfycbzBA2TwmyeTENllaEtpxlzFjUsHkZdYyQwCiOMRngeZrnROGDp-5Dc8dXpN2qlNSwlaKA/exec";
+  "https://script.google.com/macros/s/AKfycbyCGI_CSruWEfYdO6qcPOYkEODP9Tp0a6U4JqbGlVZKRjRZ2hrgRXLeE_BcGVvVMJCh0g/exec";
 
 type SheetFormType = "purchase" | "manufacturing" | "dispatch";
 type FormPayload = Record<string, unknown>;
