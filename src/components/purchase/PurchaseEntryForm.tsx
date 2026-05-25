@@ -355,6 +355,8 @@ export function PurchaseEntryForm() {
     recentPurchasesPage * RECENT_PURCHASES_PAGE_SIZE,
   );
 
+  console.log(visibleRecentPurchases);
+
   useEffect(() => {
     if (recentPurchasesPage > totalRecentPurchasePages) {
       setRecentPurchasesPage(totalRecentPurchasePages);

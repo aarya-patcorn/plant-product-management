@@ -72,6 +72,70 @@ function normalizeTimeForInput(value: string) {
   return `${String(hours).padStart(2, "0")}:${match[2]}`;
 }
 
+function getAttachmentLink(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmedValue);
+
+    if (url.hostname === "docs.google.com") {
+      const documentMatch = url.pathname.match(/^\/document\/d\/([^/]+)/);
+      if (documentMatch) {
+        return `https://docs.google.com/document/d/${documentMatch[1]}/export?format=pdf`;
+      }
+
+      const spreadsheetMatch = url.pathname.match(/^\/spreadsheets\/d\/([^/]+)/);
+      if (spreadsheetMatch) {
+        return `https://docs.google.com/spreadsheets/d/${spreadsheetMatch[1]}/export?format=pdf`;
+      }
+
+      const presentationMatch = url.pathname.match(/^\/presentation\/d\/([^/]+)/);
+      if (presentationMatch) {
+        return `https://docs.google.com/presentation/d/${presentationMatch[1]}/export/pdf`;
+      }
+    }
+
+    if (url.hostname === "drive.google.com") {
+      const driveFileMatch = url.pathname.match(/^\/file\/d\/([^/]+)/);
+      if (driveFileMatch) {
+        return `https://drive.google.com/file/d/${driveFileMatch[1]}/preview`;
+      }
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function renderAttachment(value: string, className = "") {
+  const link = getAttachmentLink(value);
+
+  if (!value.trim()) {
+    return "-";
+  }
+
+  if (!link) {
+    return value;
+  }
+
+  return (
+    <a
+      className={`text-primary underline-offset-4 hover:underline ${className}`.trim()}
+      href={link}
+      rel="noreferrer"
+      target="_blank"
+      title={value}
+    >
+      View PDF
+    </a>
+  );
+}
+
 export function PurchaseEntriesPage() {
   const [entries, setEntries] = useState<PurchaseEntry[]>([]);
   const [editingEntry, setEditingEntry] = useState<PurchaseEntry | null>(null);
@@ -436,7 +500,7 @@ export function PurchaseEntriesPage() {
                         </div>
                         <div>
                           <p className="text-xs font-medium uppercase text-muted-foreground">Attachment</p>
-                          <p className="mt-1 break-all">{entry.attachFile || "-"}</p>
+                          <p className="mt-1 break-all">{renderAttachment(entry.attachFile)}</p>
                         </div>
                       </div>
 
@@ -455,7 +519,6 @@ export function PurchaseEntriesPage() {
                 <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="whitespace-nowrap text-center" title="ID">ID</TableHead>
                       <TableHead className="whitespace-nowrap text-center" title="Date">Date</TableHead>
                       <TableHead className="whitespace-nowrap text-center" title="Time">Time</TableHead>
                       <TableHead className="whitespace-nowrap text-center" title="Material">Material</TableHead>
@@ -471,9 +534,6 @@ export function PurchaseEntriesPage() {
                   <TableBody>
                     {paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
-                        <TableCell className="max-w-[140px] truncate whitespace-nowrap text-xs text-muted-foreground" title={entry.id}>
-                          {entry.id}
-                        </TableCell>
                         <TableCell className="whitespace-nowrap" title={entry.date || "-"}>
                           {entry.date || "-"}
                         </TableCell>
@@ -496,7 +556,7 @@ export function PurchaseEntriesPage() {
                           {entry.unloadBy || "-"}
                         </TableCell>
                         <TableCell className="max-w-[140px] truncate whitespace-nowrap" title={entry.attachFile || "-"}>
-                          {entry.attachFile || "-"}
+                          {renderAttachment(entry.attachFile, "inline-block max-w-full truncate align-middle")}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate whitespace-nowrap" title={entry.remarks || "-"}>
                           {entry.remarks || "-"}
