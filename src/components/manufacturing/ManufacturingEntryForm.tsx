@@ -26,10 +26,10 @@ import SubmitLoader from "../ui/SubmitLoader";
 
 const productCategories = ["Tile Adhesive", "Bondure", "Epoxy", "Grout", "Tile Cleaner", "Other"];
 const unitOptions = ["kg", "g", "ltr", "ml", "pcs", "bags"];
-const groutColors = ["Black", "White", "Ivory", "Coffee Brown", "Gray", "Light Gray", "Green", "Blue", "Red", "Yellow"];
+const groutColors = ["Black", "White", "Ivory", "Coffee Brown", "Grey", "Light Grey", "Green", "Blue", "Red", "Yellow"];
 
 const tileAdhesiveWhiteProducts = ["K60", "K80", "K90", "Kamdhenu X"];
-const tileAdhesiveGrayProducts = ["K50", "K60", "K80", "K90", "Kamdhenu X"];
+const tileAdhesiveGreyProducts = ["K50", "K60", "K80", "K90", "Kamdhenu X"];
 const tileCleanerProducts = ["Crystal X 1L", "Shine X 1L", "Crystal X 5L", "Shine X 5L"];
 const MOBILE_RECENT_BATCHES_PAGE_SIZE = 3;
 const DESKTOP_RECENT_BATCHES_PAGE_SIZE = 8;
@@ -92,7 +92,7 @@ const getBatchDefaults = (tphBatch: string) => {
     case "2TPH":
       return {
         productCategory: "",
-        color: "Gray",
+        color: "Grey",
       };
     case "Manual Blender":
       return {
@@ -260,7 +260,7 @@ export function ManufacturingEntryForm() {
     formData.tphBatch === "1TPH"
       ? "White"
       : formData.tphBatch === "2TPH"
-        ? "Gray"
+        ? "Grey"
         : formData.color;
 
   const selectedProductCategory = formData.productCategory;
@@ -289,8 +289,8 @@ export function ManufacturingEntryForm() {
           ? epoxyProducts
           : isTileAdhesiveProduct && selectedColor === "White"
             ? tileAdhesiveWhiteProducts
-            : isTileAdhesiveProduct && selectedColor === "Gray"
-              ? tileAdhesiveGrayProducts
+            : isTileAdhesiveProduct && selectedColor === "Grey"
+              ? tileAdhesiveGreyProducts
               : [];
   const bagSizeLabel =
     formData.productCategory === "Epoxy"
@@ -365,7 +365,7 @@ export function ManufacturingEntryForm() {
       return;
     }
 
-    const recipeColor = selectedColor === "Gray" ? "Grey" : selectedColor;
+    const recipeColor = selectedColor === "Grey" ? "Grey" : selectedColor;
     const recipe = tileAdhesiveRecipes[recipeColor]?.[productName];
 
     if (!recipe) return;
@@ -781,7 +781,7 @@ export function ManufacturingEntryForm() {
                     setFormData({
                       ...formData,
                       productCategory: isOtherSelection ? "" : value,
-                      color: isOtherSelection ? "" : formData.tphBatch === "2TPH" ? "Gray" : formData.color,
+                      color: isOtherSelection ? "" : formData.tphBatch === "2TPH" ? "Grey" : formData.color,
                       finishedProductName: "",
                       bagSize: "",
                     });
@@ -886,7 +886,7 @@ export function ManufacturingEntryForm() {
                   <Input
                     id="color"
                     name="color"
-                    placeholder="e.g. Gray, White, etc."
+                    placeholder="e.g. Grey, White, etc."
                     value={selectedColor || ""}
                     onChange={(e) => updateTextField("color", e.target.value)}
                   />

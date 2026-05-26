@@ -28,6 +28,7 @@ const epoxySandColorOptions = [
   "Savetrane",
   "Terracotta",
 ];
+const packagingBagColorOptions = ["White", "Grey"];
 const MOBILE_RECENT_PURCHASES_PAGE_SIZE = 3;
 const DESKTOP_RECENT_PURCHASES_PAGE_SIZE = 4;
 const OTHER_OPTION = "__other__";
@@ -37,6 +38,7 @@ const purchaseOtherFields = [
   "level2",
   "packagingBag",
   "level3",
+  "level4",
   "bucketSize",
   "colorOfSandEpoxy",
   "unit",
@@ -51,7 +53,9 @@ const initialFormData = {
   packagingType: "",
   level2: "",
   level3: "",
+  level4: "",
   packagingBag: "",
+  packagingBagColor: "",
   bucketSize: "",
   colorOfSandEpoxy: "",
   quantityPurchased: "",
@@ -397,6 +401,10 @@ export function PurchaseEntryForm() {
     formData.rawMaterialName === "Packaging" &&
     formData.packagingType === "FG" &&
     (formData.level2 === "Tile Adhesive" || formData.level2 === "Bondure");
+  const shouldShowPackagingBagColorField =
+    formData.rawMaterialName === "Packaging" &&
+    formData.packagingType === "FG" &&
+    formData.level2 === "Tile Adhesive";
 
   const selectedLevel2Config = useMemo(() => {
     return level2Config && "children" in level2Config
@@ -543,6 +551,17 @@ export function PurchaseEntryForm() {
       }));
     }
   }, [formData.level2, shouldShowPackagingBagField, formData.packagingBag, formData.level3]);
+
+  useEffect(() => {
+    if (shouldShowPackagingBagColorField || !formData.level4) {
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      level4: "",
+    }));
+  }, [formData.level4, shouldShowPackagingBagColorField]);
 
   useEffect(() => {
     if (!autoSelectedUnit) {
@@ -714,6 +733,10 @@ export function PurchaseEntryForm() {
       return "Packaging bag is required.";
     }
 
+    if (shouldShowPackagingBagColorField && !formData.packagingBagColor.trim()) {
+      return "Packaging bag color is required.";
+    }
+
     if (level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && !formData.level3) {
       return `${level3Config.label} is required.`;
     }
@@ -771,7 +794,6 @@ export function PurchaseEntryForm() {
         id: crypto.randomUUID(),
         serialNo: "",
         ...formData,
-        level4: "",
         purchaseStock: formData.quantityPurchased,
         currentStock: "",
         usedInProduction: "",
@@ -864,6 +886,7 @@ export function PurchaseEntryForm() {
                         "packagingType",
                         "level2",
                         "level3",
+                        "level4",
                         "packagingBag",
                         "bucketSize",
                         "colorOfSandEpoxy",
@@ -896,7 +919,7 @@ export function PurchaseEntryForm() {
                       handleSelectChange(
                         "packagingType",
                         e.target.value,
-                        ["level2", "level3", "packagingBag", "bucketSize", "colorOfSandEpoxy", "unloadBy"],
+                        ["level2", "level3", "level4", "packagingBag", "bucketSize", "colorOfSandEpoxy", "unloadBy"],
                       )
                     }
                   >
@@ -933,7 +956,7 @@ export function PurchaseEntryForm() {
                       handleSelectChange(
                         "level2",
                         e.target.value,
-                        ["level3", "packagingBag", "bucketSize", "colorOfSandEpoxy"],
+                        ["level3", "level4", "packagingBag", "bucketSize", "colorOfSandEpoxy"],
                       )
                     }
                   >
@@ -975,7 +998,7 @@ export function PurchaseEntryForm() {
                     name="packagingBag"
                     value={getSelectValue("packagingBag", formData.packagingBag)}
                     disabled={formData.level2 === "Bondure"}
-                    onChange={(e) => handleSelectChange("packagingBag", e.target.value, ["bucketSize", "level3"])}
+                    onChange={(e) => handleSelectChange("packagingBag", e.target.value, ["level4", "bucketSize", "level3"])}
                   >
                     <option value="" disabled>
                       Select Packaging Bag
@@ -990,6 +1013,26 @@ export function PurchaseEntryForm() {
                 </Field>
               )}
               {renderOtherInput("packagingBag", "Packaging Bag", "Enter packaging bag")}
+
+              {shouldShowPackagingBagColorField && (
+                <Field htmlFor="packagingBagColor" label="Packaging Bag Color">
+                  <Select
+                    id="packagingBagColor"
+                    name="packagingBagColor"
+                    value={formData.packagingBagColor}
+                    onChange={(e) => updateField("packagingBagColor", e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select packaging bag color
+                    </option>
+                    {packagingBagColorOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
 
               {level3Config && (!shouldShowPackagingBagField || formData.packagingBag) && (
                 <Field htmlFor="level3" label={level3Config.label}>
