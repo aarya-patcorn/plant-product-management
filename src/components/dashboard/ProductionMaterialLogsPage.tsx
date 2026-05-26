@@ -5,6 +5,7 @@ import { fetchProductionMaterialLogs, type ProductionMaterialLog } from "@/lib/g
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import LoadingLoader from "@/components/ui/LoadingLoader";
 
 function buildProductLabel(entry: ProductionMaterialLog) {
   return [entry.productCategory, entry.productName, entry.productColor].filter(Boolean).join(" / ");
@@ -97,7 +98,9 @@ export function ProductionMaterialLogsPage() {
           {loadError ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-destructive">{loadError}</div>
           ) : isLoading ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Fetching production material logs...</div>
+            <div className="flex justify-center rounded-md border border-dashed p-6">
+              <LoadingLoader />
+            </div>
           ) : sortedEntries.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Production material logs will appear here once available.</div>
           ) : (

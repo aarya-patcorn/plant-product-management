@@ -15,6 +15,7 @@ import {
   type DispatchEntry,
   type ProductionMaterialLog,
 } from "@/lib/googleSheetApi";
+import SubmitLoader from "../ui/SubmitLoader";
 
 const MOBILE_RECENT_DEPARTURES_PAGE_SIZE = 3;
 const DESKTOP_RECENT_DEPARTURES_PAGE_SIZE = 8;
@@ -77,6 +78,10 @@ function isPositiveNumber(value: string) {
 
 function isDigitsOnly(value: string) {
   return /^\d+$/.test(value.trim());
+}
+
+function isValidDriverContact(value: string) {
+  return /^[6-9]\d{9}$/.test(value.trim());
 }
 
 export function ProductDepartureForm() {
@@ -342,6 +347,10 @@ export function ProductDepartureForm() {
     updateField(name, sanitizeNumberOnly(value, options));
   };
 
+  const updateDriverContactField = (value: string) => {
+    updateField("driverContact", sanitizeNumberOnly(value).slice(0, 10));
+  };
+
   const getSelectValue = (field: DispatchOtherField, value: string) =>
     otherSelections[field] ? OTHER_OPTION : value;
 
@@ -414,6 +423,10 @@ export function ProductDepartureForm() {
 
     if (!isDigitsOnly(formData.driverContact)) {
       return "Driver contact must contain only digits.";
+    }
+
+    if (!isValidDriverContact(formData.driverContact)) {
+      return "Driver contact must start with 6-9 and be exactly 10 digits.";
     }
 
     if (!formData.dispatchTime) {
@@ -585,10 +598,13 @@ export function ProductDepartureForm() {
               <Field htmlFor="driver-contact" label="Driver Contact">
                 <Input
                   id="driver-contact"
+                  inputMode="numeric"
+                  maxLength={10}
                   name="driverContact"
-                  placeholder="Enter driver contact number"
+                  placeholder="Enter 10-digit mobile number"
+                  pattern="[6-9][0-9]{9}"
                   value={formData.driverContact}
-                  onChange={(e) => updateNumberField("driverContact", e.target.value)}
+                  onChange={(e) => updateDriverContactField(e.target.value)}
                 />
               </Field>
               <Field htmlFor="dispatch-time" label="Dispatch Time">
@@ -782,9 +798,30 @@ export function ProductDepartureForm() {
                 <RotateCcw />
                 Reset
               </Button>
-              <Button disabled={isSubmitting} type="submit">
-                <Save />
-                {isSubmitting ? "Saving..." : "Save departure"}
+              <Button
+                disabled={isSubmitting}
+                type="submit"
+                style={{
+                  backgroundColor: isSubmitting ? "#e8e8e8" : "",
+                  color: isSubmitting ? "#333" : "",
+                }}
+              >
+                {isSubmitting ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <SubmitLoader />
+                  </div>
+                ) : (
+                  <>
+                    <Save />
+                    Save departure
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -792,31 +829,35 @@ export function ProductDepartureForm() {
       </Card>
 
       <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
-        <Card className="xl:flex xl:h-full xl:flex-col">
-          <CardHeader>
-            <CardTitle>Recent departures</CardTitle>
+        <Card className="overflow-hidden rounded-[1.5rem] border border-white/70 bg-white/85 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur xl:flex xl:h-full xl:flex-col">
+          <CardHeader className="border-b border-slate-200/80 pb-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Workspace
+            </p>
+            <CardTitle className="mt-2">Recent departures</CardTitle>
             <CardDescription>Latest dispatch entries for this register.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 xl:flex-1 xl:overflow-y-auto">
+          <CardContent className="space-y-3 p-4 xl:flex-1 xl:overflow-y-auto">
             {visibleRecentDepartures.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 No dispatch entries available yet.
               </div>
             ) : (
               visibleRecentDepartures.map((departure) => (
-              <div className="rounded-md border p-3" key={departure.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium">{departure.productName || "Dispatch entry"}</p>
-                  <span className="text-xs text-muted-foreground">{departure.challanNo || departure.id}</span>
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm" key={departure.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-sm font-medium">{departure.productName || "Dispatch entry"}</p>
+                    <span className="shrink-0 text-xs text-muted-foreground">{departure.challanNo || departure.id}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {[departure.totalBags, "bags"].filter(Boolean).join(" ")} dispatched by {departure.vehicleNo || "-"}
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {[departure.totalBags, "bags"].filter(Boolean).join(" ")} dispatched by {departure.vehicleNo || "-"}
-                </p>
-              </div>
-            )))}
+              )))}
             {recentDepartures.length > recentDeparturesPageSize ? (
-              <div className="flex items-center justify-between gap-2 border-t pt-6">
+              <div className="flex items-center justify-between gap-2 border-t border-slate-200/80 pt-4">
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentDeparturesPage((page) => Math.max(1, page - 1))}
@@ -828,6 +869,7 @@ export function ProductDepartureForm() {
                   {recentDeparturesPage} / {totalRecentDeparturePages}
                 </span>
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentDeparturesPage((page) => Math.min(totalRecentDeparturePages, page + 1))}

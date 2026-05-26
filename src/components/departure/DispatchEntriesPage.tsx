@@ -20,6 +20,7 @@ import {
   type DispatchEntry,
   updateDispatchEntry,
 } from "@/lib/googleSheetApi";
+import LoadingLoader from "@/components/ui/LoadingLoader";
 
 const ENTRIES_PER_PAGE = 10;
 
@@ -163,12 +164,15 @@ export function DispatchEntriesPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1.5">
-            <CardTitle>All dispatch entries</CardTitle>
-            <CardDescription>Review saved dispatch records in a card layout on mobile and a table on desktop.</CardDescription>
+    <div className="space-y-6">
+      <Card className="overflow-hidden border-white/70 bg-white/88 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+        <CardHeader className="gap-5 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Dispatch Register
+            </p>
+            <CardTitle className="text-3xl tracking-[-0.03em]">All dispatch entries</CardTitle>
+            <CardDescription className="max-w-2xl">Review saved dispatch records, update shipment details, and manage departure tracking from one workspace.</CardDescription>
           </div>
           <Button asChild variant="outline">
             <Link to="/product-departure">
@@ -180,13 +184,18 @@ export function DispatchEntriesPage() {
       </Card>
 
       {editingEntry && (
-        <Card>
-          <CardHeader>
+        <Card className="overflow-hidden border-white/70 bg-white/88 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <CardHeader className="border-b border-slate-200/80 pb-5">
             <CardTitle>Edit dispatch entry</CardTitle>
             <CardDescription>Update the selected record and save your changes.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-5">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <CardContent className="space-y-6 p-5">
+            <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-background/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Dispatch details</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Core dispatch identity, date, time, and token information.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field htmlFor="edit-id" label="ID">
                 <Input disabled id="edit-id" value={editingEntry.id} />
               </Field>
@@ -219,9 +228,15 @@ export function DispatchEntriesPage() {
                   }
                 />
               </Field>
+              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-background/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Product details</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Challan and product information for the dispatch record.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field htmlFor="edit-challanNo" label="Challan No">
                 <Input
                   id="edit-challanNo"
@@ -262,9 +277,15 @@ export function DispatchEntriesPage() {
                   }
                 />
               </Field>
+              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-background/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Quantity details</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Bag size, stock values, and dispatch destination details.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field htmlFor="edit-bagSize" label="Bag Size">
                 <Input
                   id="edit-bagSize"
@@ -301,9 +322,15 @@ export function DispatchEntriesPage() {
                   }
                 />
               </Field>
+              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-background/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Transport details</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Vehicle, driver, challan, and dispatch execution details.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field htmlFor="edit-vehicleNo" label="Vehicle No">
                 <Input
                   id="edit-vehicleNo"
@@ -340,9 +367,15 @@ export function DispatchEntriesPage() {
                   }
                 />
               </Field>
+              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-background/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Schedule notes</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Dispatch timing and local notes for update support.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
               <Field htmlFor="edit-dispatchTime" label="Dispatch Time">
                 <Input
                   id="edit-dispatchTime"
@@ -362,18 +395,19 @@ export function DispatchEntriesPage() {
                   }
                 />
               </Field>
+              </div>
+
+              <Field htmlFor="edit-notes" label="Notes">
+                <Textarea
+                  id="edit-notes"
+                  value=""
+                  readOnly
+                  placeholder="Dispatch entry update actions are local until sheet API support is added."
+                />
+              </Field>
             </div>
 
-            <Field htmlFor="edit-notes" label="Notes">
-              <Textarea
-                id="edit-notes"
-                value=""
-                readOnly
-                placeholder="Dispatch entry update actions are local until sheet API support is added."
-              />
-            </Field>
-
-            <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-200/80 pt-5 sm:flex-row sm:justify-end">
               <Button onClick={() => setEditingEntry(null)} type="button" variant="outline">
                 Cancel
               </Button>
@@ -386,27 +420,35 @@ export function DispatchEntriesPage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Saved entries</CardTitle>
-          <CardDescription>
+      <Card className="overflow-hidden border-white/70 bg-white/88 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+        <CardHeader className="gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between sm:space-y-0">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Records
+            </p>
+            <CardTitle className="mt-2">Saved entries</CardTitle>
+            <CardDescription>
             {isLoading
               ? "Loading dispatch entries from sheet..."
               : sortedEntries.length === 0
                 ? "No dispatch entries have been saved yet."
                 : `${sortedEntries.length} dispatch entries available.`}
           </CardDescription>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-background/70 px-3 py-2 text-sm font-medium text-muted-foreground">
+            {isLoading ? "Loading..." : `${sortedEntries.length} total`}
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-5">
           {loadError ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-destructive">
-              {loadError}
-            </div>
-          ) : isLoading ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              Fetching entries from sheet...
-            </div>
-          ) : sortedEntries.length === 0 ? (
+                <div className="rounded-md border border-dashed p-4 text-sm text-destructive">
+                  {loadError}
+                </div>
+              ) : isLoading ? (
+                <div className="flex justify-center rounded-md border border-dashed p-6">
+                  <LoadingLoader />
+                </div>
+              ) : sortedEntries.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               Add a dispatch entry first, then review it here.
             </div>

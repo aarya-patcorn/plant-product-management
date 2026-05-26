@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import LoadingLoader from "@/components/ui/LoadingLoader";
 
 type DashboardData = {
   dispatchEntries: DispatchEntry[];
@@ -36,7 +37,7 @@ function formatCount(value: number) {
 }
 
 function buildInventoryLabel(entry: PurchaseEntry) {
-  return [entry.rawMaterialName, entry.packagingType, entry.level2, entry.level3]
+  return [entry.rawMaterialName, entry.packagingType, entry.level2, entry.level3, entry.level4]
     .filter(Boolean)
     .join(" / ");
 }
@@ -136,7 +137,7 @@ function StatCard({
   description: string;
   icon: typeof Boxes;
   title: string;
-  value: string;
+  value: React.ReactNode;
 }) {
   return (
     <Card className="overflow-hidden border-0 bg-white/85 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
@@ -402,19 +403,19 @@ export function DashboardPage() {
           description="Purchase entries created today."
           icon={ShoppingBag}
           title="Today's Purchase Items"
-          value={isLoading ? "..." : formatCount(dashboardStats.todaysPurchaseItems)}
+          value={isLoading ? <LoadingLoader /> : formatCount(dashboardStats.todaysPurchaseItems)}
         />
         <StatCard
           description="Manufacturing entries created today."
           icon={Package}
           title="Today's Manufactured Items"
-          value={isLoading ? "..." : formatCount(dashboardStats.todaysManufacturedItems)}
+          value={isLoading ? <LoadingLoader /> : formatCount(dashboardStats.todaysManufacturedItems)}
         />
         <StatCard
           description="Total dispatch bags recorded today."
           icon={Boxes}
           title="Today's Dispatch Bags"
-          value={isLoading ? "..." : formatCount(dashboardStats.todaysDispatchBags)}
+          value={isLoading ? <LoadingLoader /> : formatCount(dashboardStats.todaysDispatchBags)}
         />
       </div>
 
@@ -426,12 +427,12 @@ export function DashboardPage() {
               Low-stock inventory items based on operational minimum stock thresholds.
             </CardDescription>
           </div>
-          <Badge variant="outline">{isLoading ? "Checking..." : `${lowStockAlerts.length} alerts`}</Badge>
+          <Badge variant="outline">{isLoading ? "Loading..." : `${lowStockAlerts.length} alerts`}</Badge>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              Evaluating inventory stock alerts...
+            <div className="flex justify-center rounded-md border border-dashed p-6">
+              <LoadingLoader />
             </div>
           ) : lowStockAlerts.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
@@ -484,7 +485,9 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Loading inventory...</div>
+              <div className="flex justify-center rounded-md border border-dashed p-6">
+                <LoadingLoader />
+              </div>
             ) : sortedInventoryEntries.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No inventory entries found yet.</div>
             ) : (
@@ -569,7 +572,9 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Loading production logs...</div>
+              <div className="flex justify-center rounded-md border border-dashed p-6">
+                <LoadingLoader />
+              </div>
             ) : sortedProductionLogs.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No production logs found yet.</div>
             ) : (

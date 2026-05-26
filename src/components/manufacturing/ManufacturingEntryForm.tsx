@@ -22,6 +22,7 @@ import {
   tileAdhesiveRecipes,
   tileCleanerRecipes,
 } from "@/components/manufacturing/manufacturingData";
+import SubmitLoader from "../ui/SubmitLoader";
 
 const productCategories = ["Tile Adhesive", "Bondure", "Epoxy", "Grout", "Tile Cleaner", "Other"];
 const unitOptions = ["kg", "g", "ltr", "ml", "pcs", "bags"];
@@ -1118,9 +1119,30 @@ export function ManufacturingEntryForm() {
                 <RotateCcw />
                 Reset
               </Button>
-              <Button disabled={isSubmitting} type="submit">
-                <Save />
-                {isSubmitting ? "Saving..." : "Save production"}
+              <Button
+                disabled={isSubmitting}
+                type="submit"
+                style={{
+                  backgroundColor: isSubmitting ? "#e8e8e8" : "",
+                  color: isSubmitting ? "#333" : "",
+                }}
+              >
+                {isSubmitting ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <SubmitLoader />
+                  </div>
+                ) : (
+                  <>
+                    <Save />
+                    Save production
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -1128,22 +1150,25 @@ export function ManufacturingEntryForm() {
       </Card>
 
       <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
-        <Card className="xl:flex xl:h-full xl:flex-col">
-          <CardHeader>
-            <CardTitle>Recent batches</CardTitle>
+        <Card className="overflow-hidden rounded-[1.5rem] border border-white/70 bg-white/85 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur xl:flex xl:h-full xl:flex-col">
+          <CardHeader className="border-b border-slate-200/80 pb-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Workspace
+            </p>
+            <CardTitle className="mt-2">Recent batches</CardTitle>
             <CardDescription>Latest production entries for this register.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 xl:flex-1 xl:overflow-y-auto">
+          <CardContent className="space-y-3 p-4 xl:flex-1 xl:overflow-y-auto">
             {visibleRecentBatches.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 No production entries available yet.
               </div>
             ) : (
               visibleRecentBatches.map((batch) => (
-                <div className="rounded-md border p-3" key={batch.id}>
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm" key={batch.id}>
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium">{batch.finishedProductName || "Production entry"}</p>
-                    <span className="text-xs text-muted-foreground">{batch.batchNo || batch.id}</span>
+                    <p className="truncate text-sm font-medium">{batch.finishedProductName || "Production entry"}</p>
+                    <span className="shrink-0 text-xs text-muted-foreground">{batch.batchNo || batch.id}</span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {[batch.totalBagsProduced, "bags"].filter(Boolean).join(" ")} produced in {batch.productCategory || "-"}
@@ -1151,8 +1176,9 @@ export function ManufacturingEntryForm() {
                 </div>
               )))}
             {recentBatches.length > recentBatchesPageSize ? (
-              <div className="flex items-center justify-between gap-2 border-t pt-2">
+              <div className="flex items-center justify-between gap-2 border-t border-slate-200/80 pt-4">
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentBatchesPage((page) => Math.max(1, page - 1))}
@@ -1164,6 +1190,7 @@ export function ManufacturingEntryForm() {
                   {recentBatchesPage} / {totalRecentBatchPages}
                 </span>
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentBatchesPage((page) => Math.min(totalRecentBatchPages, page + 1))}

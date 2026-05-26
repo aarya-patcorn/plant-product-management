@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchPurchaseEntries, submitSheetEntry, type PurchaseEntry } from "@/lib/googleSheetApi";
 import { sanitizeNumberOnly, sanitizeTextOnly } from "@/lib/inputValidation";
+import SubmitLoader from "../ui/SubmitLoader";
 
 const unitOptions = ["kg", "ltr", "mt", "pcs", "bags", "ml", "nos", "others"];
 const materialOptions = ["Cement", "Sand", "Chemical", "Packaging", "Spares", "Other"];
@@ -741,10 +742,6 @@ export function PurchaseEntryForm() {
       return "Supplier name is required.";
     }
 
-    if (!formData.invoiceNo.trim()) {
-      return "Bill / Invoice No. is required.";
-    }
-
     if (!formData.unloadBy.trim()) {
       return "Unload By is required.";
     }
@@ -774,6 +771,7 @@ export function PurchaseEntryForm() {
         id: crypto.randomUUID(),
         serialNo: "",
         ...formData,
+        level4: "",
         purchaseStock: formData.quantityPurchased,
         currentStock: "",
         usedInProduction: "",
@@ -1100,7 +1098,7 @@ export function PurchaseEntryForm() {
                   onChange={(e) => updateTextField("supplierName", e.target.value)}
                 />
               </Field>
-              <Field htmlFor="invoice-no" label="Bill / Invoice No.">
+              <Field htmlFor="invoice-no" label="Bill / Invoice No. (Optional)">
                 <Input
                   id="invoice-no"
                   name="invoiceNo"
@@ -1181,7 +1179,7 @@ export function PurchaseEntryForm() {
               </Field>
               {renderOtherInput("unloadBy", "Unload By", "Enter person or team name")}
 
-              <Field htmlFor="attach-file" label="Attach File">
+              <Field htmlFor="attach-file" label="Attach File (Optional)">
                 <Input
                   ref={fileInputRef}
                   name="attachFile"
@@ -1220,9 +1218,30 @@ export function PurchaseEntryForm() {
                 <RotateCcw />
                 Reset
               </Button>
-              <Button disabled={isSubmitting} type="submit">
-                <Save />
-                {isSubmitting ? "Saving..." : "Save purchase"}
+              <Button
+                disabled={isSubmitting}
+                type="submit"
+                style={{
+                  backgroundColor: isSubmitting ? "#e8e8e8" : "",
+                  color: isSubmitting ? "#333" : "",
+                }}
+              >
+                {isSubmitting ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <SubmitLoader />
+                  </div>
+                ) : (
+                  <>
+                    <Save />
+                    Save purchase
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -1230,12 +1249,15 @@ export function PurchaseEntryForm() {
       </Card>
 
       <div className="space-y-5 xl:sticky xl:top-5 xl:h-[calc(90vh-1rem)]">
-        <Card className="xl:flex xl:h-full xl:flex-col">
-          <CardHeader>
-            <CardTitle>Recent purchases</CardTitle>
+        <Card className="overflow-hidden rounded-[1.5rem] border border-white/70 bg-white/85 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur xl:flex xl:h-full xl:flex-col">
+          <CardHeader className="border-b border-slate-200/80 pb-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Workspace
+            </p>
+            <CardTitle className="mt-2">Recent purchases</CardTitle>
             <CardDescription>Latest saved purchase entries.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 xl:flex-1 xl:overflow-y-auto">
+          <CardContent className="space-y-3 p-4 xl:flex-1 xl:overflow-y-auto">
             {recentPurchases.length === 0 ? (
               <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                 Saved purchase entries will appear here.
@@ -1252,10 +1274,10 @@ export function PurchaseEntryForm() {
                 const quantity = [purchase.quantityPurchased, purchase.unit].filter(Boolean).join(" ");
 
                 return (
-                  <div className="rounded-md border p-3" key={purchase.id}>
+                  <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm" key={purchase.id}>
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium">{materialPath || "Purchase entry"}</p>
-                      <span className="text-xs text-muted-foreground">
+                      <p className="truncate text-sm font-medium">{materialPath || "Purchase entry"}</p>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {purchase.invoiceNo || purchase.id}
                       </span>
                     </div>
@@ -1271,8 +1293,9 @@ export function PurchaseEntryForm() {
               })
             )}
             {recentPurchases.length > recentPurchasesPageSize ? (
-              <div className="flex items-center justify-between gap-2 border-t pt-3">
+              <div className="flex items-center justify-between gap-2 border-t border-slate-200/80 pt-4">
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentPurchasesPage((page) => Math.max(1, page - 1))}
@@ -1284,6 +1307,7 @@ export function PurchaseEntryForm() {
                   {recentPurchasesPage} / {totalRecentPurchasePages}
                 </span>
                 <Button
+                  className="rounded-xl bg-white"
                   type="button"
                   variant="outline"
                   onClick={() => setRecentPurchasesPage((page) => Math.min(totalRecentPurchasePages, page + 1))}
