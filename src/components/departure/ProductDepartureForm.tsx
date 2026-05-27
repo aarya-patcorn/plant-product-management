@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ClipboardList, Eye, RotateCcw, Save, Truck } from "lucide-react";
+import { Eye, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ const DESKTOP_RECENT_DEPARTURES_PAGE_SIZE = 8;
 const OTHER_OPTION = "__other__";
 const dispatchOtherFields = ["productCategory", "productName", "token", "productColor", "bagSize"] as const;
 type DispatchOtherField = (typeof dispatchOtherFields)[number];
-
 const initialFormData = {
   date: "",
   time: "",
@@ -42,6 +41,21 @@ const initialFormData = {
   quantity: "",
   totalBags: "",
 };
+
+type DispatchProductSelection = Pick<
+  typeof initialFormData,
+  "token" | "productCategory" | "bagSize" | "productColor" | "productName" | "quantity" | "totalBags"
+>;
+
+const productSelectionFields = [
+  "token",
+  "productCategory",
+  "bagSize",
+  "productColor",
+  "productName",
+  "quantity",
+  "totalBags",
+] as const;
 
 function Field({
   children,
@@ -87,6 +101,7 @@ function isValidDriverContact(value: string) {
 export function ProductDepartureForm() {
   const [formData, setFormData] = useState(initialFormData);
   const [otherSelections, setOtherSelections] = useState(initialDispatchOtherState);
+  const [selectedProducts, setSelectedProducts] = useState<DispatchProductSelection[]>([]);
   const [productionEntries, setProductionEntries] = useState<ProductionMaterialLog[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productLoadError, setProductLoadError] = useState("");
@@ -228,6 +243,7 @@ export function ProductDepartureForm() {
         (entry) =>
           entry.productCategory === formData.productCategory &&
           entry.productName === formData.productName &&
+          (!formData.token || entry.token === formData.token) &&
           (isTileCleanerSelected || entry.productColor === formData.productColor) &&
           entry.bagSize === formData.bagSize,
       ),
@@ -236,6 +252,7 @@ export function ProductDepartureForm() {
       formData.productCategory,
       formData.productColor,
       formData.productName,
+      formData.token,
       isTileCleanerSelected,
       productionEntries,
     ],
@@ -392,6 +409,111 @@ export function ProductDepartureForm() {
       </Field>
     ) : null;
 
+  const getCurrentProductSelection = (): DispatchProductSelection => ({
+    token: formData.token,
+    productCategory: formData.productCategory,
+    bagSize: formData.bagSize,
+    productColor: isTileCleanerSelected ? "" : formData.productColor,
+    productName: formData.productName,
+    quantity: formData.quantity,
+    totalBags: formData.totalBags,
+  });
+
+  const resetProductSelectionFields = () => {
+    setFormData((current) => ({
+      ...current,
+      ...Object.fromEntries(productSelectionFields.map((field) => [field, ""])),
+    }));
+    setOtherSelections(initialDispatchOtherState);
+  };
+
+  const getProductKey = (product: DispatchProductSelection) =>
+    [
+      product.productCategory,
+      product.productName,
+      product.token,
+      product.productColor,
+      product.bagSize,
+    ].join("|");
+
+  const formatProductLabel = (product: DispatchProductSelection) =>
+    [product.productCategory, product.productName, product.token, product.productColor, product.bagSize]
+      .filter(Boolean)
+      .join(" / ");
+
+  const validateProductSelection = (product: DispatchProductSelection, index?: number) => {
+    const prefix = typeof index === "number" ? `Product ${index + 1}: ` : "";
+    const isTileCleanerProduct = product.productCategory === "Tile Cleaner";
+
+    if (!product.productCategory) {
+      return `${prefix}Product category is required.`;
+    }
+
+    if (!product.productName) {
+      return `${prefix}Product name is required.`;
+    }
+
+    if (!product.token) {
+      return `${prefix}Token is required.`;
+    }
+
+    if (!isTileCleanerProduct && !product.productColor) {
+      return `${prefix}Product color is required.`;
+    }
+
+    if (!product.bagSize) {
+      return `${prefix}Bag size is required.`;
+    }
+
+    if (!isPositiveNumber(product.quantity)) {
+      return `${prefix}Available stock must be greater than 0.`;
+    }
+
+    if (!isPositiveNumber(product.totalBags)) {
+      return `${prefix}Departed bags must be greater than 0.`;
+    }
+
+    if (Number(product.totalBags) > Number(product.quantity)) {
+      return `${prefix}Departed bags cannot be greater than available stock.`;
+    }
+
+    return "";
+  };
+
+  const getProductsForSubmission = () =>
+    selectedProducts.length > 0 ? selectedProducts : [getCurrentProductSelection()];
+
+  const handleAddProduct = () => {
+    const product = getCurrentProductSelection();
+    const validationMessage = validateProductSelection(product);
+
+    if (validationMessage) {
+      setSubmitStatus("error");
+      setSubmitMessage(validationMessage);
+      toast.error(validationMessage);
+      return;
+    }
+
+    const productKey = getProductKey(product);
+    const existingIndex = selectedProducts.findIndex((selectedProduct) => getProductKey(selectedProduct) === productKey);
+
+    setSelectedProducts((current) => {
+      if (existingIndex === -1) {
+        return [...current, product];
+      }
+
+      return current.map((selectedProduct, index) => (index === existingIndex ? product : selectedProduct));
+    });
+    resetProductSelectionFields();
+    setSubmitStatus("idle");
+    setSubmitMessage("");
+    toast.success(existingIndex === -1 ? "Product added to departure." : "Product line updated.");
+  };
+
+  const removeSelectedProduct = (indexToRemove: number) => {
+    setSelectedProducts((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
   const validateForm = () => {
     if (!formData.date) {
       return "Date is required.";
@@ -441,36 +563,17 @@ export function ProductDepartureForm() {
       return "Today vehicle No. must be greater than 0.";
     }
 
-    if (!formData.productCategory) {
-      return "Product category is required.";
-    }
+    const productsToSubmit = getProductsForSubmission();
 
-    if (!formData.productName) {
-      return "Product name is required.";
-    }
+    for (let index = 0; index < productsToSubmit.length; index += 1) {
+      const validationMessage = validateProductSelection(
+        productsToSubmit[index],
+        selectedProducts.length > 0 ? index : undefined,
+      );
 
-    if (!formData.token) {
-      return "Token is required.";
-    }
-
-    if (!isTileCleanerSelected && !formData.productColor) {
-      return "Product color is required.";
-    }
-
-    if (!formData.bagSize) {
-      return "Bag size is required.";
-    }
-
-    if (!isPositiveNumber(formData.quantity)) {
-      return "Available stock must be greater than 0.";
-    }
-
-    if (!isPositiveNumber(formData.totalBags)) {
-      return "Departed bags must be greater than 0.";
-    }
-
-    if (Number(formData.totalBags) > Number(formData.quantity)) {
-      return "Departed bags cannot be greater than available stock.";
+      if (validationMessage) {
+        return validationMessage;
+      }
     }
 
     return "";
@@ -490,16 +593,26 @@ export function ProductDepartureForm() {
       return;
     }
 
+    const productsToSubmit = getProductsForSubmission();
+
     setIsSubmitting(true);
 
     try {
-      await submitSheetEntry("dispatch", {
-        ...formData,
-        productColor: isTileCleanerSelected ? "" : formData.productColor,
-      });
+      for (const product of productsToSubmit) {
+        await submitSheetEntry("dispatch", {
+          ...formData,
+          ...product,
+          productColor: product.productCategory === "Tile Cleaner" ? "" : product.productColor,
+        });
+      }
       setFormData(initialFormData);
       setOtherSelections(initialDispatchOtherState);
-      toast.success("Dispatch entry saved successfully.");
+      setSelectedProducts([]);
+      toast.success(
+        productsToSubmit.length === 1
+          ? "Dispatch entry saved successfully."
+          : `${productsToSubmit.length} dispatch entries saved successfully.`,
+      );
     } catch (error) {
       setSubmitStatus("error");
       setSubmitMessage(error instanceof Error ? error.message : "Unable to save dispatch entry.");
@@ -507,14 +620,13 @@ export function ProductDepartureForm() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <Card className="min-w-0">
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle>Product dispatch form</CardTitle>
-            <CardDescription>Capture challan, vehicle, dispatch, product, quantity, and bag details.</CardDescription>
+            <CardDescription>Capture challan, vehicle, dispatch, and one or more product departure lines.</CardDescription>
           </div>
           <Button asChild variant="outline">
             <Link to="/dispatch-entries">
@@ -529,6 +641,7 @@ export function ProductDepartureForm() {
             onReset={() => {
               setFormData(initialFormData);
               setOtherSelections(initialDispatchOtherState);
+              setSelectedProducts([]);
               setSubmitStatus("idle");
               setSubmitMessage("");
             }}
@@ -781,6 +894,55 @@ export function ProductDepartureForm() {
               </Field>
             </div>
 
+            <div className="space-y-3 rounded-md border border-slate-200/80 bg-background/60 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Selected products</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Add each product line before saving this departure.
+                  </p>
+                </div>
+                <Button disabled={isSubmitting} type="button" variant="outline" onClick={handleAddProduct}>
+                  <Plus />
+                  Add product
+                </Button>
+              </div>
+
+              {selectedProducts.length === 0 ? (
+                <div className="rounded-md border border-dashed bg-white/70 p-3 text-sm text-muted-foreground">
+                  No products added yet. The current product fields will be saved as a single departure line.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedProducts.map((product, index) => (
+                    <div
+                      className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                      key={`${getProductKey(product)}-${index}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {formatProductLabel(product) || `Product ${index + 1}`}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {product.totalBags} departed bags from {product.quantity} available
+                        </p>
+                      </div>
+                      <Button
+                        aria-label={`Remove ${formatProductLabel(product) || `product ${index + 1}`}`}
+                        className="self-start sm:self-auto"
+                        disabled={isSubmitting}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => removeSelectedProduct(index)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
               {submitStatus === "error" && submitMessage && (
                 <p
@@ -819,7 +981,7 @@ export function ProductDepartureForm() {
                 ) : (
                   <>
                     <Save />
-                    Save departure
+                    Save departures
                   </>
                 )}
               </Button>
