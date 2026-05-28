@@ -622,15 +622,22 @@ export function ManufacturingEntryForm() {
         rawMaterials,
       });
 
+      const isFailed =
+        response &&
+        typeof response === "object" &&
+        "success" in response &&
+        response.success === false;
+
       const responseMessage =
-        response && typeof response === "object" && "message" in response
-          ? String(response.message ?? "")
-          : "";
+        response && typeof response === "object"
+          ? String(
+            response.message ||
+            response.data ||
+            "Unable to save production entry."
+          )
+          : "Unable to save production entry.";
 
-      const hasUnavailableStockMessage =
-        /stock.*(unavailable|not available|insufficient)|insufficient.*stock|out of stock/i.test(responseMessage);
-
-      if (hasUnavailableStockMessage) {
+      if (isFailed) {
         setSubmitStatus("error");
         setSubmitMessage(responseMessage);
         toast.error(responseMessage);
