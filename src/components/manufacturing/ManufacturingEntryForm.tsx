@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { fetchInventory, fetchManufacturingEntries, submitSheetEntry, type ManufacturingEntry, type PurchaseEntry } from "@/lib/googleSheetApi";
+import { fetchManufacturingEntries, submitSheetEntry, type ManufacturingEntry } from "@/lib/googleSheetApi";
 import { sanitizeNumberOnly, sanitizeTextOnly } from "@/lib/inputValidation";
 import {
   bondureRecipes,
@@ -159,60 +159,6 @@ function getOptionsWithOther(options: string[]) {
   const normalizedOptions = options.filter((option) => option.toLowerCase() !== "other" && option.toLowerCase() !== "others");
   return [...normalizedOptions, "Other"];
 }
-function normalizeStockText(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function toStockNumber(value: string) {
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) ? parsedValue : 0;
-}
-
-function buildStockKey(item: { rawMaterialName: string; packagingType: string; materialUnit?: string; unit?: string }) {
-  return [
-    normalizeStockText(item.rawMaterialName),
-    normalizeStockText(item.packagingType),
-    normalizeStockText(item.materialUnit ?? item.unit ?? ""),
-  ].join("|");
-}
-
-function getInventoryStockMessage(rawMaterials: typeof initialRawMaterials, inventoryEntries: PurchaseEntry[]) {
-  const availableStockByKey = new Map<string, number>();
-
-  inventoryEntries.forEach((entry) => {
-    const key = buildStockKey(entry);
-    availableStockByKey.set(key, (availableStockByKey.get(key) ?? 0) + toStockNumber(entry.currentStock));
-  });
-
-  const requiredStockByKey = new Map<string, { label: string; quantity: number; unit: string }>();
-
-  rawMaterials.forEach((item) => {
-    const key = buildStockKey(item);
-    const current = requiredStockByKey.get(key);
-    const quantity = toStockNumber(item.materialQuantity);
-    const label = [item.rawMaterialName, item.packagingType].filter(Boolean).join(" / ") || "Raw material";
-
-    requiredStockByKey.set(key, {
-      label,
-      quantity: (current?.quantity ?? 0) + quantity,
-      unit: item.materialUnit,
-    });
-  });
-
-  for (const [key, requiredStock] of requiredStockByKey) {
-    const availableStock = availableStockByKey.get(key);
-
-    if (availableStock === undefined) {
-      return `${requiredStock.label} stock is not available in inventory.`;
-    }
-
-    if (availableStock < requiredStock.quantity) {
-      return `${requiredStock.label} has only ${availableStock} ${requiredStock.unit || "stock"} available, but ${requiredStock.quantity} ${requiredStock.unit || "stock"} is required.`;
-    }
-  }
-
-  return "";
-}
 
 export function ManufacturingEntryForm() {
 
@@ -221,9 +167,6 @@ export function ManufacturingEntryForm() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inventoryEntries, setInventoryEntries] = useState<PurchaseEntry[]>([]);
-  const [isLoadingInventory, setIsLoadingInventory] = useState(true);
-  const [inventoryLoadError, setInventoryLoadError] = useState("");
   const [recentBatches, setRecentBatches] = useState<ManufacturingEntry[]>([]);
   const [recentBatchesPage, setRecentBatchesPage] = useState(1);
   const [recentBatchesPageSize, setRecentBatchesPageSize] = useState(() =>
@@ -367,37 +310,6 @@ export function ManufacturingEntryForm() {
     recentBatchesPage * recentBatchesPageSize,
   );
 
-
-  useEffect(() => {
-    let isMounted = true;
-
-    void fetchInventory()
-      .then((entries) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setInventoryEntries(entries);
-        setInventoryLoadError("");
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setInventoryEntries([]);
-        setInventoryLoadError(error instanceof Error ? error.message : "Unable to fetch inventory entries.");
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingInventory(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 1024px)");
     const updatePageSize = () =>
@@ -695,38 +607,6 @@ export function ManufacturingEntryForm() {
       setSubmitStatus("error");
       setSubmitMessage(message);
       toast.error(message);
-      return;
-    }
-    if (isLoadingInventory) {
-      const message = "Inventory stock is still loading. Please try again in a moment.";
-      setSubmitStatus("error");
-      setSubmitMessage(message);
-      toast.error(message);
-      return;
-    }
-
-    if (inventoryLoadError) {
-      const message = `Unable to verify inventory stock: ${inventoryLoadError}`;
-      setSubmitStatus("error");
-      setSubmitMessage(message);
-      toast.error(message);
-      return;
-    }
-
-    if (inventoryEntries.length === 0) {
-      const message = "Inventory stock is not available. Add purchase stock before saving production.";
-      setSubmitStatus("error");
-      setSubmitMessage(message);
-      toast.error(message);
-      return;
-    }
-
-    const stockValidationMessage = getInventoryStockMessage(rawMaterials, inventoryEntries);
-
-    if (stockValidationMessage) {
-      setSubmitStatus("error");
-      setSubmitMessage(stockValidationMessage);
-      toast.error(stockValidationMessage);
       return;
     }
 
@@ -1233,11 +1113,6 @@ export function ManufacturingEntryForm() {
                   className="text-sm font-medium text-destructive sm:mr-auto"
                 >
                   {submitMessage}
-                </p>
-              )}
-              {inventoryLoadError && !submitMessage && (
-                <p className="text-sm font-medium text-destructive sm:mr-auto">
-                  {inventoryLoadError}
                 </p>
               )}
               <Button disabled={isSubmitting} type="reset" variant="outline">
